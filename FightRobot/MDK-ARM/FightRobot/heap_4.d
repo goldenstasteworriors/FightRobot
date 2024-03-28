@@ -1,0 +1,13 @@
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.c
+fightrobot\heap_4.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+fightrobot\heap_4.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+fightrobot\heap_4.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+fightrobot\heap_4.o: ../Core/Inc/FreeRTOSConfig.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+fightrobot\heap_4.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h

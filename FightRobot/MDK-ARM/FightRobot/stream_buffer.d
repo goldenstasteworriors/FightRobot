@@ -1,0 +1,14 @@
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c
+fightrobot\stream_buffer.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+fightrobot\stream_buffer.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+fightrobot\stream_buffer.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+fightrobot\stream_buffer.o: ../Core/Inc/FreeRTOSConfig.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+fightrobot\stream_buffer.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/stream_buffer.h

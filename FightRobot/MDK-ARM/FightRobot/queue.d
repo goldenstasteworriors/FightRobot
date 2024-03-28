@@ -1,0 +1,15 @@
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/queue.c
+fightrobot\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+fightrobot\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+fightrobot\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+fightrobot\queue.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+fightrobot\queue.o: ../Core/Inc/FreeRTOSConfig.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+fightrobot\queue.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h

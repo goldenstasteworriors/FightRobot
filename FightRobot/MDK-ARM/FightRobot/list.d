@@ -1,0 +1,12 @@
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/list.c
+fightrobot\list.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+fightrobot\list.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+fightrobot\list.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+fightrobot\list.o: ../Core/Inc/FreeRTOSConfig.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+fightrobot\list.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h

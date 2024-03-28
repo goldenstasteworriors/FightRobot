@@ -1,0 +1,14 @@
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/croutine.c
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+fightrobot\croutine.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+fightrobot\croutine.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+fightrobot\croutine.o: ../Core/Inc/FreeRTOSConfig.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/croutine.h
+fightrobot\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
