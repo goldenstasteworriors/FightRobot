@@ -200,7 +200,7 @@ void get_moto_measure(moto_measure_t *ptr, CAN_HandleTypeDef* hcan)
 	ptr->last_angle = ptr->angle;
 	ptr->angle = (uint16_t)(rec_buf[0]<<8 | rec_buf[1]) ;
 	ptr->real_current  = (int16_t)(rec_buf[2]<<8 | rec_buf[3]);
-	ptr->speed_rpm = ptr->real_current;	//这里是因为两种电调对应位不一样的信息
+	ptr->speed_rpm = ptr->real_current;	
 	ptr->given_current = (int16_t)(rec_buf[4]<<8 | rec_buf[5])/-5;
 	ptr->hall = rec_buf[6];
 	if(ptr->angle - ptr->last_angle > 4096)

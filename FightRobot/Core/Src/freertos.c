@@ -28,6 +28,8 @@
 #include "bsp_can.h"
 #include "pid.h"
 #include "mytype.h"
+#include "oled.h"
+#include "bmp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -165,6 +167,15 @@ void StartDefaultTask(void const * argument)
   /* USER CODE BEGIN StartDefaultTask */
 	HAL_UART_Receive_IT(&huart1, (uint8_t *)&aRxBuffer, 1);
 	HAL_UART_Receive_IT(&huart3, (uint8_t *)&aRxBuffer, 1);
+	OLED_Init();
+	OLED_ColorTurn(0);//0正常显示，1 反色显示
+  OLED_DisplayTurn(0);//0正常显示 1 屏幕翻转显示
+	OLED_Refresh();
+	
+
+	OLED_ShowString(0,12*0,(uint8_t*)"hello world",12 );	
+	OLED_ShowString(0,12*1,(uint8_t*)"test",12);	
+	OLED_Refresh();	
 	CAN_Filter_Config();
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan,CAN_IT_RX_FIFO0_MSG_PENDING);
@@ -210,7 +221,7 @@ void MoveTask(void const * argument)
 		if(can_get_flag==0||can_get_flag==1||can_get_flag==2||can_get_flag==3)
 		{
 			printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
-										can_get_flag,moto_chassis[can_get_flag].angle,moto_chassis[can_get_flag].speed_rpm,
+										can_get_flag,moto_chassis[can_get_flag].total_angle,moto_chassis[can_get_flag].speed_rpm,
 										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);
 			can_get_flag=4;
 		}
