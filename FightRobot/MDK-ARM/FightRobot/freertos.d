@@ -55,3 +55,6 @@ fightrobot\freertos.o: ../bsp/pid.h
 fightrobot\freertos.o: ../bsp/oled.h
 fightrobot\freertos.o: ../Core/Inc/gpio.h
 fightrobot\freertos.o: ../bsp/bmp.h
+fightrobot\freertos.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+fightrobot\freertos.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
+fightrobot\freertos.o: ../Core/Inc/usart.h

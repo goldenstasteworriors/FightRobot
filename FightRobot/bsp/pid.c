@@ -207,7 +207,8 @@ void PID_struct_init(
 pid_t pid_omg;
 pid_t pid_pos;
 pid_t pid_spd[4];
-
+pid_t pid_apriltag_x;
+pid_t pid_apriltag_d;
 
 void pid_test_init(){
 	

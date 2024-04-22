@@ -44,7 +44,7 @@ void MX_USART1_UART_Init(void);
 void MX_USART3_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+uint8_t Serial_GetRxFlag(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
