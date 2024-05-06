@@ -23,8 +23,12 @@ fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma_ex.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
+fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h
+fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc_ex.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
+fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_sram.h
+fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_ll_fsmc.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
 fightrobot\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
@@ -44,7 +48,10 @@ fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
 fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
+fightrobot\main.o: ../Core/Inc/adc.h
 fightrobot\main.o: ../Core/Inc/can.h
 fightrobot\main.o: ../Core/Inc/spi.h
+fightrobot\main.o: ../Core/Inc/tim.h
 fightrobot\main.o: ../Core/Inc/usart.h
 fightrobot\main.o: ../Core/Inc/gpio.h
+fightrobot\main.o: ../Core/Inc/fsmc.h

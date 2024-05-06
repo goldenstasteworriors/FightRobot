@@ -32,8 +32,12 @@ fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma_ex.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h
+fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h
+fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc_ex.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
+fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_sram.h
+fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_ll_fsmc.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
 fightrobot\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
@@ -58,3 +62,7 @@ fightrobot\freertos.o: ../bsp/bmp.h
 fightrobot\freertos.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 fightrobot\freertos.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
 fightrobot\freertos.o: ../Core/Inc/usart.h
+fightrobot\freertos.o: ../Core/Inc/tim.h
+fightrobot\freertos.o: ../Drivers/SYSTEM/sys/sys.h
+fightrobot\freertos.o: ../bsp/lcd.h
+fightrobot\freertos.o: ../Core/Inc/adc.h

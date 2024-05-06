@@ -19,10 +19,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "adc.h"
 #include "can.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include "fsmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -47,7 +50,8 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+keys key[4]={0};
+uint16_t long_time=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -94,8 +98,15 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
   MX_SPI1_Init();
+  MX_TIM6_Init();
+  MX_FSMC_Init();
+  MX_ADC1_Init();
+  MX_ADC2_Init();
+  MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-
+	HAL_ADCEx_Calibration_Start(&hadc1);    //ADУ׼
+	HAL_ADCEx_Calibration_Start(&hadc2);    //ADУ׼
+	HAL_ADCEx_Calibration_Start(&hadc3);    //ADУ׼	
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
@@ -124,6 +135,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -153,6 +165,12 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInit.AdcClockSelection = RCC_ADCPCLK2_DIV6;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
@@ -176,7 +194,57 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
+	if(htim==&htim6)
+	{
+		key[0].key_sta=HAL_GPIO_ReadPin(GPIOE,GPIO_PIN_4);
+		key[1].key_sta=HAL_GPIO_ReadPin(GPIOE,GPIO_PIN_3);
+		key[2].key_sta=HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_2);
+		key[3].key_sta=HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0);
+		for(int i=0;i<4;i++)
+		{
+			switch(key[i].jud_sta)
+			{
+				case 0:
+					if(key[i].key_sta==GPIO_PIN_RESET)
+					{
+						key[i].jud_sta=1;
+					}
+				break;
+				case 1:
+					if(key[i].key_sta==GPIO_PIN_RESET)
+					{
+						key[i].jud_sta=2;
+					}
+					else
+					{
+					key[i].jud_sta=0;
+					}
+				break;
+				case 2:
+					if(key[i].key_sta==GPIO_PIN_SET)
+					{
+						if(i==3&&long_time>200){
 
+							key[i].flag=2;
+							key[i].jud_sta=0;
+							long_time=0;
+						}
+						else{
+						key[i].flag=1;
+						key[i].jud_sta=0;
+						}
+					}
+					else if(key[i].key_sta==GPIO_PIN_RESET&&i==3)
+					{
+						long_time+=1;
+					}
+					
+				break;
+
+			}
+		}
+		
+	}
   /* USER CODE END Callback 1 */
 }
 

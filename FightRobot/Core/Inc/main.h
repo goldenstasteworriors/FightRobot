@@ -36,7 +36,12 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+typedef struct
+{
+uint16_t key_sta;
+uint16_t jud_sta;
+uint16_t flag;
+}keys;
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
