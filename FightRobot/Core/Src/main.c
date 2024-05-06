@@ -101,12 +101,10 @@ int main(void)
   MX_TIM6_Init();
   MX_FSMC_Init();
   MX_ADC1_Init();
-  MX_ADC2_Init();
   MX_ADC3_Init();
   /* USER CODE BEGIN 2 */
-	HAL_ADCEx_Calibration_Start(&hadc1);    //ADУ׼
-	HAL_ADCEx_Calibration_Start(&hadc2);    //ADУ׼
-	HAL_ADCEx_Calibration_Start(&hadc3);    //ADУ׼	
+	HAL_ADCEx_Calibration_Start(&hadc1);    
+	HAL_ADCEx_Calibration_Start(&hadc3);    
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

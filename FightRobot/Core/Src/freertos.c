@@ -126,51 +126,58 @@ void scan(void)
 		Voltage1 = (float)ADValue1 / 4095 * 3.3;
     L1= 61.119*pow(Voltage1,-1.092);
 		sprintf(text,"L1=%f",L1);
-		lcd_show_string(10, 200, 240, 32, 16, text, WHITE);
+		lcd_show_string(10, 200, 240, 32, 16, text, RED);
 	
-		ADValue2=get_adc(&hadc1);
-		Voltage2 = (float)ADValue2 / 4095 * 3.3;
-    L2= 61.119*pow(Voltage2,-1.092);
-		sprintf(text,"L2=%f",L2);
-		lcd_show_string(10, 240, 240, 32, 16, text, WHITE);
+//		ADValue2=get_adc(&hadc1);
+//		Voltage2 = (float)ADValue2 / 4095 * 3.3;
+//    L2= 61.119*pow(Voltage2,-1.092);
+//		sprintf(text,"L2=%f",L2);
+//		lcd_show_string(10, 240, 240, 32, 16, text, WHITE);
 
-		ADValue3=get_adc(&hadc3);
-		Voltage3 = (float)ADValue3 / 4095 * 3.3;
-    L3= 61.119*pow(Voltage3,-1.092);
-		sprintf(text,"L3=%f",L3);
-		lcd_show_string(10, 280, 240, 32, 16, text, WHITE);
+//		ADValue3=get_adc(&hadc3);
+//		Voltage3 = (float)ADValue3 / 4095 * 3.3;
+//    L3= 61.119*pow(Voltage3,-1.092);
+//		sprintf(text,"L3=%f",L3);
+//		lcd_show_string(10, 280, 240, 32, 16, text, WHITE);
 
-		ADValue4=get_adc(&hadc1);
-		Voltage4 = (float)ADValue4 / 4095 * 3.3;
-    L4= 61.119*pow(Voltage4,-1.092);
-		sprintf(text,"L4=%f",L4);
-		lcd_show_string(10, 320, 240, 32, 16, text, WHITE);	
+//		ADValue4=get_adc(&hadc1);
+//		Voltage4 = (float)ADValue4 / 4095 * 3.3;
+//    L4= 61.119*pow(Voltage4,-1.092);
+//		sprintf(text,"L4=%f",L4);
+//		lcd_show_string(10, 320, 240, 32, 16, text, WHITE);	
 
 		HAL_ADC_Stop(&hadc1);
 		
 		
-		GD1=get_adc(&hadc2);
+		GD1=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0);
 		sprintf(text,"GD1=%u",GD1);
-		lcd_show_string(10, 360, 240, 32, 16, text, WHITE);
+		if(GD1==1){		set_spd[1]=	0;
+		set_spd[3]=0;
+		set_spd[2]=0;
+		set_spd[0]=0;}
+		else{		set_spd[1]=	1800;
+		set_spd[3]=-1800;
+		set_spd[2]=-1800;
+		set_spd[0]=1800;}
+		lcd_show_string(10, 240, 240, 32, 16, text, RED);
 	
-		GD2=get_adc(&hadc2);
-		sprintf(text,"GD2=%u",GD2);
-		lcd_show_string(10, 400, 240, 32, 16, text, WHITE);
+//		GD2=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1);
+//		sprintf(text,"GD2=%u",GD2);
+//		lcd_show_string(10, 400, 240, 32, 16, text, WHITE);
 
-		GD3=get_adc(&hadc2);
-		sprintf(text,"GD3=%u",GD3);
-		lcd_show_string(10, 440, 240, 32, 16, text, WHITE);
-	
-		GD4=get_adc(&hadc2);
-		sprintf(text,"GD4=%u",GD4);
-		lcd_show_string(10, 480, 240, 32, 16, text, WHITE);
+//		GD3=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2);
+//		sprintf(text,"GD3=%u",GD3);
+//		lcd_show_string(10, 440, 240, 32, 16, text, WHITE);
+//	
+//		GD4=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_3);
+//		sprintf(text,"GD4=%u",GD4);
+//		lcd_show_string(10, 480, 240, 32, 16, text, WHITE);
 		
-		HAL_ADC_Stop(&hadc2);
 		
 		
 		HD=get_adc(&hadc3);
 		sprintf(text,"HD=%u",HD);
-		lcd_show_string(10, 520, 240, 32, 16, text, WHITE);
+		lcd_show_string(10, 280., 240, 32, 16, text, RED);
 		
 		osDelay(100);
 }
@@ -362,12 +369,13 @@ void StartDefaultTask(void const * argument)
 void MoveTask(void const * argument)
 {
   /* USER CODE BEGIN MoveTask */
-	while(key[1].flag!=1){}
+//	while(key[1].flag!=1){}
 
 
-	set_spd[0]=	set_spd[1]=	set_spd[3]=4800;
-	set_spd[2]=-4800;
-
+		set_spd[1]=	1800;
+		set_spd[3]=-1800;
+		set_spd[2]=-1800;
+		set_spd[0]=1800;
 	
 	for(int i=0; i<4; i++)
 	{
