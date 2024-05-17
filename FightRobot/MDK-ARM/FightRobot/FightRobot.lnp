@@ -7,7 +7,6 @@
 "fightrobot\can.o"
 "fightrobot\fsmc.o"
 "fightrobot\spi.o"
-"fightrobot\tim.o"
 "fightrobot\usart.o"
 "fightrobot\stm32f1xx_it.o"
 "fightrobot\stm32f1xx_hal_msp.o"

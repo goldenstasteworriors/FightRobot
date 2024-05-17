@@ -33,7 +33,7 @@
 #include "stdio.h"
 #include "math.h"
 #include "usart.h"
-#include "tim.h"
+//#include "tim.h"
 #include "main.h"
 #include "sys.h"
 #include "usart.h"
@@ -107,85 +107,166 @@ uint16_t GD1;
 uint16_t GD2;
 uint16_t GD3;
 uint16_t GD4;
+uint16_t GD5;
 
+uint16_t HD1;
+uint16_t HD2;
 
-uint16_t HD;
+uint32_t ticktime=0;
+uint32_t spintime=1000;
+uint16_t long_time=0;
+//debug使用
+	uint16_t vel=1500;
+	uint8_t state=0;//0:前进   1:后退   2:前进
+	bool state_change=0;
+	uint32_t time=0;
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 osThreadId moveHandle;
 osThreadId pushBoxHandle;
 osThreadId scanTaskHandle;
 osThreadId openmvConnectHandle;
+osThreadId tsetHandle;
+osThreadId tickHandle;
+osThreadId keyHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+//转圈
+void spin(uint16_t vel)
+{
+		set_spd[1]=	vel;
+		set_spd[3]=-vel;
+		set_spd[2]=-vel;
+		set_spd[0]=vel;
+}
+
+//向前
+void forward(uint16_t vel)
+{
+		set_spd[1]=vel;
+		set_spd[3]=-vel;
+		set_spd[2]=-vel;
+		set_spd[0]=vel;
+}
+
 void scan(void)
 {
 
 		ADValue1=get_adc(&hadc1);
-		Voltage1 = (float)ADValue1 / 4095 * 3.3;
-    L1= 61.119*pow(Voltage1,-1.092);
-		sprintf(text,"L1=%f",L1);
-		lcd_show_string(10, 200, 240, 32, 16, text, RED);
-	
-//		ADValue2=get_adc(&hadc1);
-//		Voltage2 = (float)ADValue2 / 4095 * 3.3;
-//    L2= 61.119*pow(Voltage2,-1.092);
-//		sprintf(text,"L2=%f",L2);
-//		lcd_show_string(10, 240, 240, 32, 16, text, WHITE);
-
-//		ADValue3=get_adc(&hadc3);
-//		Voltage3 = (float)ADValue3 / 4095 * 3.3;
-//    L3= 61.119*pow(Voltage3,-1.092);
-//		sprintf(text,"L3=%f",L3);
-//		lcd_show_string(10, 280, 240, 32, 16, text, WHITE);
-
-//		ADValue4=get_adc(&hadc1);
-//		Voltage4 = (float)ADValue4 / 4095 * 3.3;
-//    L4= 61.119*pow(Voltage4,-1.092);
-//		sprintf(text,"L4=%f",L4);
-//		lcd_show_string(10, 320, 240, 32, 16, text, WHITE);	
+		ADValue2=get_adc(&hadc1);
+		ADValue3=get_adc(&hadc1);
+		ADValue4=get_adc(&hadc1);
 
 		HAL_ADC_Stop(&hadc1);
+
+	
+		Voltage1 = (float)ADValue1 / 4095 * 3.3;
+		Voltage2 = (float)ADValue2 / 4095 * 3.3;
+		Voltage3 = (float)ADValue3 / 4095 * 3.3;
+		Voltage4 = (float)ADValue4 / 4095 * 3.3;
+	
+	
+    L1= 61.119*pow(Voltage1,-1.092);
+    L2= 61.119*pow(Voltage2,-1.092);
+    L3= 61.119*pow(Voltage3,-1.092);
+    L4= 61.119*pow(Voltage4,-1.092);
+
+
+		sprintf(text,"L1=%f",L1);
+		lcd_show_string(10, 60, 60, 32, 16, text, RED);
+	
+
+		sprintf(text,"L2=%f",L2);
+		lcd_show_string(10, 80, 240, 32, 16, text, RED);
+
+		sprintf(text,"L3=%f",L3);
+		lcd_show_string(10, 100, 240, 32, 16, text, RED);
+
+		sprintf(text,"L4=%f",L4);
+ 		lcd_show_string(10, 120, 240, 32, 16, text, RED);	
+
 		
 		
 		GD1=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0);
 		sprintf(text,"GD1=%u",GD1);
-		if(GD1==1){		set_spd[1]=	0;
-		set_spd[3]=0;
-		set_spd[2]=0;
-		set_spd[0]=0;}
-		else{		set_spd[1]=	1800;
-		set_spd[3]=-1800;
-		set_spd[2]=-1800;
-		set_spd[0]=1800;}
-		lcd_show_string(10, 240, 240, 32, 16, text, RED);
+//		if(GD1==1){		set_spd[1]=	0;
+//		set_spd[3]=0;
+//		set_spd[2]=0;
+//		set_spd[0]=0;}
+//		else{		set_spd[1]=	1800;
+//		set_spd[3]=-1800;
+//		set_spd[2]=-1800;
+//		set_spd[0]=1800;}
+		lcd_show_string(10, 160, 240, 32, 16, text, RED);
 	
-//		GD2=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1);
-//		sprintf(text,"GD2=%u",GD2);
-//		lcd_show_string(10, 400, 240, 32, 16, text, WHITE);
+		GD2=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1);
+		sprintf(text,"GD2=%u",GD2);
+		lcd_show_string(10, 180, 240, 32, 16, text, RED);
 
-//		GD3=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2);
-//		sprintf(text,"GD3=%u",GD3);
-//		lcd_show_string(10, 440, 240, 32, 16, text, WHITE);
-//	
-//		GD4=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_3);
-//		sprintf(text,"GD4=%u",GD4);
-//		lcd_show_string(10, 480, 240, 32, 16, text, WHITE);
+		GD3=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2);
+		sprintf(text,"GD3=%u",GD3);
+		lcd_show_string(10, 200, 240, 32, 16, text, RED);
+	
+		GD4=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_3);
+		sprintf(text,"GD4=%u",GD4);
+		lcd_show_string(10, 220, 240, 32, 16, text, RED);
+		
+		GD5=HAL_GPIO_ReadPin(GPIOF,GPIO_PIN_10);
+		sprintf(text,"GD5=%u",GD5);
+		lcd_show_string(10, 240, 240, 32, 16, text, RED);		
+		
+		HD1=get_adc(&hadc3);
+		HD2=get_adc(&hadc3);
+
+		HAL_ADC_Stop(&hadc3);
+
+		sprintf(text,"HD1=%u",HD1);
+		lcd_show_string(10, 260, 240, 32, 16, text, RED);
+		
+		sprintf(text,"HD1=%u",HD2);
+		lcd_show_string(10, 280, 240, 32, 16, text, RED);
 		
 		
+		sprintf(text,"state=%u",state);
+		lcd_show_string(10, 0, 240, 32, 16, text, RED);
+		sprintf(text,"ticktime=%u",ticktime);
+		lcd_show_string(10, 20, 240, 32, 16, text, RED);
+		sprintf(text,"time=%u",time);
+		lcd_show_string(10, 40, 240, 32, 16, text, RED);
 		
-		HD=get_adc(&hadc3);
-		sprintf(text,"HD=%u",HD);
-		lcd_show_string(10, 280., 240, 32, 16, text, RED);
+		
+//		if(state_change==1)
+//		{
+//			
+//			switch(state)
+//			{
+//				case 0:
+//					ticktime=0;
+//					forward(600);
+//					break;
+//				case 1:
+//					time=ticktime;
+//					ticktime=0;
+//					forward(-600);
+//					break;
+//				case 2:
+//					spin(600);
+//					ticktime=0;
+//					break;				
+//			}
+//				sprintf(text,"ticktime=%u",ticktime);
+//				lcd_show_string(10, 20, 240, 32, 16, text, WHITE);
+//				sprintf(text,"time=%u",time);
+//				lcd_show_string(10, 40, 240, 32, 16, text, WHITE);			
+//			state_change=0;
+
+//		}
 		
 		osDelay(100);
 }
 
-void spin(void)
-{
-	
-}
+
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void const * argument);
@@ -193,6 +274,9 @@ void MoveTask(void const * argument);
 void PushBoxTask(void const * argument);
 void ScanTask(void const * argument);
 void OpenmvConnect(void const * argument);
+void Test(void const * argument);
+void TickTask(void const * argument);
+void KeyTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -264,16 +348,28 @@ void MX_FREERTOS_Init(void) {
   moveHandle = osThreadCreate(osThread(move), NULL);
 
   /* definition and creation of pushBox */
-  osThreadDef(pushBox, PushBoxTask, osPriorityAboveNormal, 0, 128);
-  pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
+//  osThreadDef(pushBox, PushBoxTask, osPriorityAboveNormal, 0, 128);
+//  pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
 
   /* definition and creation of scanTask */
-  osThreadDef(scanTask, ScanTask, osPriorityAboveNormal, 0, 128);
-  scanTaskHandle = osThreadCreate(osThread(scanTask), NULL);
+//  osThreadDef(scanTask, ScanTask, osPriorityAboveNormal, 0, 128);
+//  scanTaskHandle = osThreadCreate(osThread(scanTask), NULL);
 
   /* definition and creation of openmvConnect */
-  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
-  openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
+//  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
+//  openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
+
+  /* definition and creation of tset */
+  osThreadDef(tset, Test, osPriorityAboveNormal, 0, 128);
+  tsetHandle = osThreadCreate(osThread(tset), NULL);
+
+  /* definition and creation of tick */
+//  osThreadDef(tick, TickTask, osPriorityAboveNormal, 0, 128);
+//  tickHandle = osThreadCreate(osThread(tick), NULL);
+
+  /* definition and creation of key */
+//  osThreadDef(key, KeyTask, osPriorityHigh, 0, 128);
+//  keyHandle = osThreadCreate(osThread(key), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -301,7 +397,7 @@ void StartDefaultTask(void const * argument)
 	CAN_Filter_Config();
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan,CAN_IT_RX_FIFO0_MSG_PENDING);
-	HAL_TIM_Base_Start_IT(&htim6);
+//	HAL_TIM_Base_Start_IT(&htim6);
 
 	printf("OK\r\n");
 	PID_struct_init(&pid_apriltag_x, POSITION_PID, 500, 500,
@@ -311,19 +407,17 @@ void StartDefaultTask(void const * argument)
 								1.5f,	0.1f,	0.0f	);//待调
 	pid_apriltag_d.deadband=1000;//待调
 	
-    lcd_clear(BLACK);
+  lcd_clear(BLACK);
+	forward(vel);
 
 
-    lcd_show_string(10, 40, 240, 32, 16, "STM32", RED);
-    lcd_show_string(10, 80, 240, 24, 24, "TFTLCD TEST", RED);
+
 
 
   /* Infinite loop */
   for(;;)
   {
-		printf("id:%d\r\n",tag_id);
-		printf("x_translation:%d\r\n",x_translation);		
-		printf("distance:%d\r\n",distance);
+
 //		if(x_translation>pid_apriltag_d.deadband)//待调
 //		{
 
@@ -372,10 +466,10 @@ void MoveTask(void const * argument)
 //	while(key[1].flag!=1){}
 
 
-		set_spd[1]=	1800;
-		set_spd[3]=-1800;
-		set_spd[2]=-1800;
-		set_spd[0]=1800;
+//		set_spd[1]=	-3000;
+//		set_spd[3]=3000;
+//		set_spd[2]=3000;
+//		set_spd[0]=-3000;
 	
 	for(int i=0; i<4; i++)
 	{
@@ -395,10 +489,10 @@ void MoveTask(void const * argument)
 									pid_spd[2].pos_out,
 									pid_spd[3].pos_out);
 		if(can_get_flag==0||can_get_flag==1||can_get_flag==2||can_get_flag==3)
-		{
-			printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
+		{printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
 										can_get_flag,moto_chassis[can_get_flag].total_angle,moto_chassis[can_get_flag].speed_rpm,
 										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);
+			
 			can_get_flag=4;
 		}
 	
@@ -423,7 +517,10 @@ void PushBoxTask(void const * argument)
 		if(Serial_GetRxFlag())
 		{
 			sprintf(text,"ID:%d  x:%d, dis:%d",tag_id,x_translation,distance);
-//			OLED_ShowString(0,12*0,(uint8_t*)text,12);	
+//		OLED_ShowString(0,12*0,(uint8_t*)text,12);	
+			printf("id:%d\r\n",tag_id);
+			printf("x_translation:%d\r\n",x_translation);		
+			printf("distance:%d\r\n",distance);
 		}
     osDelay(1);
   }
@@ -530,9 +627,143 @@ void OpenmvConnect(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		
     osDelay(1);
   }
   /* USER CODE END OpenmvConnect */
+}
+
+/* USER CODE BEGIN Header_Test */
+/**
+* @brief Function implementing the tset thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Test */
+void Test(void const * argument)
+{
+  /* USER CODE BEGIN Test */
+
+  /* Infinite loop */
+	//state: 0前进 1后退 2旋转
+  for(;;)
+  {
+
+		
+//		if(GD1==1)
+//			{
+//				state=1;
+//				state_change=1;
+
+				
+//			}
+    osDelay(1);
+  }
+  /* USER CODE END Test */
+}
+
+/* USER CODE BEGIN Header_TickTask */
+/**
+* @brief Function implementing the tick thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_TickTask */
+void TickTask(void const * argument)
+{
+  /* USER CODE BEGIN TickTask */
+  /* Infinite loop */
+  for(;;)
+  {
+		ticktime+=10;
+		if(state==0)
+		{
+			
+		}
+		else if(state==1)
+		{
+			if(ticktime>=time)
+			{
+				state=2;
+				state_change=1;
+			}
+		}
+		else
+		{
+			if(ticktime>=spintime)
+			{
+				state=0;
+			}
+		}
+    osDelay(10);
+  }
+  /* USER CODE END TickTask */
+}
+
+/* USER CODE BEGIN Header_KeyTask */
+/**
+* @brief Function implementing the key thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_KeyTask */
+void KeyTask(void const * argument)
+{
+  /* USER CODE BEGIN KeyTask */
+  /* Infinite loop */
+  for(;;)
+  {
+		key[0].key_sta=HAL_GPIO_ReadPin(GPIOE,GPIO_PIN_4);
+		key[1].key_sta=HAL_GPIO_ReadPin(GPIOE,GPIO_PIN_3);
+		key[2].key_sta=HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_2);
+		key[3].key_sta=HAL_GPIO_ReadPin(GPIOA,GPIO_PIN_0);
+		for(int i=0;i<4;i++)
+		{
+			switch(key[i].jud_sta)
+			{
+				case 0:
+					if(key[i].key_sta==GPIO_PIN_RESET)
+					{
+						key[i].jud_sta=1;
+					}
+				break;
+				case 1:
+					if(key[i].key_sta==GPIO_PIN_RESET)
+					{
+						key[i].jud_sta=2;
+					}
+					else
+					{
+					key[i].jud_sta=0;
+					}
+				break;
+				case 2:
+					if(key[i].key_sta==GPIO_PIN_SET)
+					{
+						if(i==3&&long_time>200){
+
+							key[i].flag=2;
+							key[i].jud_sta=0;
+							long_time=0;
+						}
+						else{
+						key[i].flag=1;
+						key[i].jud_sta=0;
+						}
+					}
+					else if(key[i].key_sta==GPIO_PIN_RESET&&i==3)
+					{
+						long_time+=1;
+					}
+					
+				break;
+
+			}
+		}
+		
+    osDelay(10);
+  }
+  /* USER CODE END KeyTask */
 }
 
 /* Private application code --------------------------------------------------*/

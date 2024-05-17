@@ -51,7 +51,6 @@ fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_grou
 fightrobot\main.o: ../Core/Inc/adc.h
 fightrobot\main.o: ../Core/Inc/can.h
 fightrobot\main.o: ../Core/Inc/spi.h
-fightrobot\main.o: ../Core/Inc/tim.h
 fightrobot\main.o: ../Core/Inc/usart.h
 fightrobot\main.o: ../Core/Inc/gpio.h
 fightrobot\main.o: ../Core/Inc/fsmc.h
