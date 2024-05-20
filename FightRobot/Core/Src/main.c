@@ -21,7 +21,6 @@
 #include "cmsis_os.h"
 #include "adc.h"
 #include "can.h"
-#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 #include "fsmc.h"
@@ -96,7 +95,6 @@ int main(void)
   MX_CAN_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
-  MX_SPI1_Init();
   MX_FSMC_Init();
   MX_ADC1_Init();
   MX_ADC3_Init();

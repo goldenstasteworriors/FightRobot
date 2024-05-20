@@ -72,13 +72,13 @@ extern keys key[4];
 s16 torque=500;
 uint8_t data[8]={1,2,3,4,5,6,7,8};
 uint8_t rxcnt=0;
+bool run=0;
 
 uint8_t can_get_flag=4;//要打印需要该值在0-3之间
 int set_v,set_spd[4];
 
 char text[20];
-bool turn_left=0;//这里记得要把行进策略写在一个变量里
-bool turn_right=0;
+
 bool go_straight=0;
 double front_infrafot_distanceL=0; //左边的
 double front_infrafot_distanceR=0; //右边的
@@ -115,8 +115,15 @@ uint16_t HD2;
 uint32_t ticktime=0;
 uint32_t spintime=1000;
 uint16_t long_time=0;
+
+//实际判断量
+bool enermy_find=0;
+bool enermy_front=0;
+bool turn_left=0;
+bool turn_right=0;
+
 //debug使用
-	uint16_t vel=1500;
+	uint16_t vel=800;
 	uint8_t state=0;//0:前进   1:后退   2:前进
 	bool state_change=0;
 	uint32_t time=0;
@@ -132,12 +139,20 @@ osThreadId keyHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-//转圈
+double max(double L)	
+{
+	if(L<80)
+		return L;
+	else 
+		return 81.000;
+}
+
+//转圈(右)
 void spin(uint16_t vel)
 {
-		set_spd[1]=	vel;
-		set_spd[3]=-vel;
-		set_spd[2]=-vel;
+		set_spd[1]=vel;
+		set_spd[3]=vel;
+		set_spd[2]=vel;
 		set_spd[0]=vel;
 }
 
@@ -150,9 +165,38 @@ void forward(uint16_t vel)
 		set_spd[0]=vel;
 }
 
+//检测/执行函数
+bool hongwai_find(double L)
+{
+	if(L<80&&L>35)
+		return 1;
+	else 
+		return 0;
+}
+
+void find_enermy()
+{
+	turn_right=0;
+	turn_left =0;
+	if(GD5==0)
+	{
+		enermy_find=1;
+		enermy_front=1;
+	}
+	else if(hongwai_find(L1))
+	{
+		turn_right=1;
+	}
+	else if(hongwai_find(L2))
+	{
+		turn_left=1;
+	}
+}
+
+
 void scan(void)
 {
-
+		
 		ADValue1=get_adc(&hadc1);
 		ADValue2=get_adc(&hadc1);
 		ADValue3=get_adc(&hadc1);
@@ -167,24 +211,24 @@ void scan(void)
 		Voltage4 = (float)ADValue4 / 4095 * 3.3;
 	
 	
-    L1= 61.119*pow(Voltage1,-1.092);
-    L2= 61.119*pow(Voltage2,-1.092);
-    L3= 61.119*pow(Voltage3,-1.092);
-    L4= 61.119*pow(Voltage4,-1.092);
+    L1= max(61.119*pow(Voltage1,-1.092));
+    L2= max(61.119*pow(Voltage2,-1.092));
+    L3= max(61.119*pow(Voltage3,-1.092));
+    L4= max(61.119*pow(Voltage4,-1.092));
 
 
 		sprintf(text,"L1=%f",L1);
-		lcd_show_string(10, 60, 60, 32, 16, text, RED);
+		lcd_show_string(10, 60, 120, 32, 16, text, RED);
 	
 
 		sprintf(text,"L2=%f",L2);
-		lcd_show_string(10, 80, 240, 32, 16, text, RED);
+		lcd_show_string(10, 80, 120, 32, 16, text, RED);
 
 		sprintf(text,"L3=%f",L3);
-		lcd_show_string(10, 100, 240, 32, 16, text, RED);
+		lcd_show_string(10, 100, 120, 32, 16, text, RED);
 
 		sprintf(text,"L4=%f",L4);
- 		lcd_show_string(10, 120, 240, 32, 16, text, RED);	
+ 		lcd_show_string(10, 120, 120, 32, 16, text, RED);	
 
 		
 		
@@ -198,23 +242,23 @@ void scan(void)
 //		set_spd[3]=-1800;
 //		set_spd[2]=-1800;
 //		set_spd[0]=1800;}
-		lcd_show_string(10, 160, 240, 32, 16, text, RED);
+//		lcd_show_string(10, 160, 240, 32, 16, text, RED);
 	
 		GD2=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1);
 		sprintf(text,"GD2=%u",GD2);
-		lcd_show_string(10, 180, 240, 32, 16, text, RED);
+//		lcd_show_string(10, 180, 240, 32, 16, text, RED);
 
 		GD3=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2);
 		sprintf(text,"GD3=%u",GD3);
-		lcd_show_string(10, 200, 240, 32, 16, text, RED);
+//		lcd_show_string(10, 200, 240, 32, 16, text, RED);
 	
 		GD4=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_3);
 		sprintf(text,"GD4=%u",GD4);
-		lcd_show_string(10, 220, 240, 32, 16, text, RED);
+//		lcd_show_string(10, 220, 240, 32, 16, text, RED);
 		
 		GD5=HAL_GPIO_ReadPin(GPIOF,GPIO_PIN_10);
 		sprintf(text,"GD5=%u",GD5);
-		lcd_show_string(10, 240, 240, 32, 16, text, RED);		
+//		lcd_show_string(10, 240, 240, 32, 16, text, RED);		
 		
 		HD1=get_adc(&hadc3);
 		HD2=get_adc(&hadc3);
@@ -222,48 +266,22 @@ void scan(void)
 		HAL_ADC_Stop(&hadc3);
 
 		sprintf(text,"HD1=%u",HD1);
-		lcd_show_string(10, 260, 240, 32, 16, text, RED);
+//		lcd_show_string(10, 260, 240, 32, 16, text, RED);
 		
 		sprintf(text,"HD1=%u",HD2);
-		lcd_show_string(10, 280, 240, 32, 16, text, RED);
+//		lcd_show_string(10, 280, 240, 32, 16, text, RED);
 		
 		
 		sprintf(text,"state=%u",state);
-		lcd_show_string(10, 0, 240, 32, 16, text, RED);
+		lcd_show_string(10, 240, 240, 32, 16, text, RED);
 		sprintf(text,"ticktime=%u",ticktime);
 		lcd_show_string(10, 20, 240, 32, 16, text, RED);
 		sprintf(text,"time=%u",time);
 		lcd_show_string(10, 40, 240, 32, 16, text, RED);
-		
-		
-//		if(state_change==1)
-//		{
-//			
-//			switch(state)
-//			{
-//				case 0:
-//					ticktime=0;
-//					forward(600);
-//					break;
-//				case 1:
-//					time=ticktime;
-//					ticktime=0;
-//					forward(-600);
-//					break;
-//				case 2:
-//					spin(600);
-//					ticktime=0;
-//					break;				
-//			}
-//				sprintf(text,"ticktime=%u",ticktime);
-//				lcd_show_string(10, 20, 240, 32, 16, text, WHITE);
-//				sprintf(text,"time=%u",time);
-//				lcd_show_string(10, 40, 240, 32, 16, text, WHITE);			
-//			state_change=0;
 
-//		}
 		
-		osDelay(100);
+
+		
 }
 
 
@@ -348,28 +366,28 @@ void MX_FREERTOS_Init(void) {
   moveHandle = osThreadCreate(osThread(move), NULL);
 
   /* definition and creation of pushBox */
-//  osThreadDef(pushBox, PushBoxTask, osPriorityAboveNormal, 0, 128);
-//  pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
+  osThreadDef(pushBox, PushBoxTask, osPriorityAboveNormal, 0, 128);
+  pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
 
   /* definition and creation of scanTask */
-//  osThreadDef(scanTask, ScanTask, osPriorityAboveNormal, 0, 128);
-//  scanTaskHandle = osThreadCreate(osThread(scanTask), NULL);
+  osThreadDef(scanTask, ScanTask, osPriorityAboveNormal, 0, 128);
+  scanTaskHandle = osThreadCreate(osThread(scanTask), NULL);
 
   /* definition and creation of openmvConnect */
-//  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
-//  openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
+  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
+  openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
 
   /* definition and creation of tset */
   osThreadDef(tset, Test, osPriorityAboveNormal, 0, 128);
   tsetHandle = osThreadCreate(osThread(tset), NULL);
 
   /* definition and creation of tick */
-//  osThreadDef(tick, TickTask, osPriorityAboveNormal, 0, 128);
-//  tickHandle = osThreadCreate(osThread(tick), NULL);
+  osThreadDef(tick, TickTask, osPriorityAboveNormal, 0, 128);
+  tickHandle = osThreadCreate(osThread(tick), NULL);
 
   /* definition and creation of key */
-//  osThreadDef(key, KeyTask, osPriorityHigh, 0, 128);
-//  keyHandle = osThreadCreate(osThread(key), NULL);
+  osThreadDef(key, KeyTask, osPriorityAboveNormal, 0, 128);
+  keyHandle = osThreadCreate(osThread(key), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -408,8 +426,8 @@ void StartDefaultTask(void const * argument)
 	pid_apriltag_d.deadband=1000;//待调
 	
   lcd_clear(BLACK);
-	forward(vel);
-
+//	forward(vel);
+//	spin(vel);
 
 
 
@@ -417,7 +435,19 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-
+		if(key[1].flag==1)
+		{
+			vel+=100;
+			key[1].flag=0;
+		}
+//		else if(key[1].flag==2)
+//		{
+//			vel-=100;
+//			key[1].flag=0;
+//		}
+		sprintf(text,"vel=%u",vel);
+		lcd_show_string(10, 140, 60, 32, 16, text, RED);			
+			
 //		if(x_translation>pid_apriltag_d.deadband)//待调
 //		{
 
@@ -431,7 +461,7 @@ void StartDefaultTask(void const * argument)
 //		{
 //			OLED_ShowString(0,12*0,(uint8_t*)"go!",12 );
 //		}
-
+	
 //		OLED_Refresh();
 //		if(abs(x_translation)>pid_apriltag_d.deadband)
 //		{
@@ -446,7 +476,6 @@ void StartDefaultTask(void const * argument)
 //		}
 //		HAL_Delay(300);
 //		vTaskDelete(NULL);
-		vTaskDelete(NULL);
     osDelay(10);
   }
 
@@ -489,10 +518,11 @@ void MoveTask(void const * argument)
 									pid_spd[2].pos_out,
 									pid_spd[3].pos_out);
 		if(can_get_flag==0||can_get_flag==1||can_get_flag==2||can_get_flag==3)
-		{printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
+		{
+			printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
 										can_get_flag,moto_chassis[can_get_flag].total_angle,moto_chassis[can_get_flag].speed_rpm,
 										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);
-			
+				
 			can_get_flag=4;
 		}
 	
@@ -514,15 +544,17 @@ void PushBoxTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-		if(Serial_GetRxFlag())
-		{
-			sprintf(text,"ID:%d  x:%d, dis:%d",tag_id,x_translation,distance);
-//		OLED_ShowString(0,12*0,(uint8_t*)text,12);	
+//		if(Serial_GetRxFlag())
+//		{
+//			sprintf(text,"ID:%d  x:%d, dis:%d",tag_id,x_translation,distance);
+////		OLED_ShowString(0,12*0,(uint8_t*)text,12);	
+//			sprintf(text,"ID:%d  x:%d, dis:%d",tag_id,x_translation,distance);
+//			lcd_show_string(10, 180, 160, 32, 16, text, RED);
 			printf("id:%d\r\n",tag_id);
 			printf("x_translation:%d\r\n",x_translation);		
 			printf("distance:%d\r\n",distance);
-		}
-    osDelay(1);
+//		}
+    osDelay(100);
   }
   /* USER CODE END PushBoxTask */
 }
@@ -537,79 +569,114 @@ void PushBoxTask(void const * argument)
 void ScanTask(void const * argument)
 {
   /* USER CODE BEGIN ScanTask */
+	while(key[0].flag!=1)
+	{
+	}
+	vTaskDelete(defaultTaskHandle);
   /* Infinite loop */
   for(;;)
   {
 		scan();//需要赋值的：红外：FL,FR,l,r；光电：outofstage(是否和哪边出台)
 
-		if(left_infrafot_distance!=0)
+//		if(left_infrafot_distance!=0)
+//		{
+//			turn_left=1;
+////			OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);					
+//		}
+//		else if(right_infrafot_distance!=0)
+//		{
+//			turn_right=1;
+////			OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);					
+//		}
+//		else if(front_infrafot_distanceL!=0&&front_infrafot_distanceR==0)
+//		{
+//			turn_left=1;
+////			OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);	
+//		}
+//		else if(front_infrafot_distanceL==0&&front_infrafot_distanceR!=0)
+//		{
+//			turn_right=1;
+////			OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);	
+//		}
+//		else if(fabs(front_infrafot_distanceL-front_infrafot_distanceR)>front_dis_err)
+//		{
+//			if(front_infrafot_distanceL>front_infrafot_distanceR)
+//			{
+//				turn_right=1;
+////				OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);			
+//			}
+//			else if(front_infrafot_distanceL<front_infrafot_distanceR)
+//			{
+//				turn_left=1;
+////				OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);			
+//			}
+//			
+//		}
+//		else if(fabs(front_infrafot_distanceL-front_infrafot_distanceR)<front_dis_err)
+//		{
+//			go_straight=1;
+////			OLED_ShowString(0,12*4,(uint8_t*)"go",12);			
+//		}
+//		else //在车尾
+//		{
+//			
+//		}
+//		if(outofstage!=0)
+//		{
+//			switch(outofstage)
+//			{
+//				case 1://车头出台
+////					OLED_ShowString(0,12*2,(uint8_t*)"headout",12);			
+//					break;
+//				case 2://车尾出台
+////					OLED_ShowString(0,12*2,(uint8_t*)"backout",12);						
+//					break;
+//				case 3://左侧出台
+////					OLED_ShowString(0,12*2,(uint8_t*)"leftout",12);						
+//					break;
+//				case 4://右侧出台
+////					OLED_ShowString(0,12*2,(uint8_t*)"rightout",12);						
+//					break;
+//			}
+//			outofstage=0;
+//		}
+//		sprintf(text,"FL:%.2f  FR:%.2f",front_infrafot_distanceL,front_infrafot_distanceR);
+////		OLED_ShowString(0,12*0,(uint8_t*)text,12);	
+//		sprintf(text,"l:%.2f  r:%.2f",left_infrafot_distance,right_infrafot_distance);
+////		OLED_ShowString(0,12*1,(uint8_t*)text,12);	
+
+//			sprintf(text,"电机 %d :speed: %d;",can_get_flag,moto_chassis[can_get_flag].speed_rpm);
+//			lcd_show_string(10, 40, 200, 32, 16, text, RED);	
+
+		if(turn_left)
 		{
-			turn_left=1;
-//			OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);					
+			sprintf(text,"turnleft");
 		}
-		else if(right_infrafot_distance!=0)
+		else if(turn_right)
 		{
-			turn_right=1;
-//			OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);					
+			sprintf(text,"turnright");
 		}
-		else if(front_infrafot_distanceL!=0&&front_infrafot_distanceR==0)
+		else 
 		{
-			turn_left=1;
-//			OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);	
+			sprintf(text,"no_turn");
 		}
-		else if(front_infrafot_distanceL==0&&front_infrafot_distanceR!=0)
+		strcat(text,"-----");			
+		if(enermy_find&&enermy_front)
 		{
-			turn_right=1;
-//			OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);	
+			strcat(text,"go!!!");
 		}
-		else if(fabs(front_infrafot_distanceL-front_infrafot_distanceR)>front_dis_err)
+	
+		else if(enermy_find)
 		{
-			if(front_infrafot_distanceL>front_infrafot_distanceR)
-			{
-				turn_right=1;
-//				OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);			
-			}
-			else if(front_infrafot_distanceL<front_infrafot_distanceR)
-			{
-				turn_left=1;
-//				OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);			
-			}
-			
+			strcat(text,"find");
 		}
-		else if(fabs(front_infrafot_distanceL-front_infrafot_distanceR)<front_dis_err)
+		else 
 		{
-			go_straight=1;
-//			OLED_ShowString(0,12*4,(uint8_t*)"go",12);			
+			strcat(text,"no");
 		}
-		else //在车尾
-		{
-			
-		}
-		if(outofstage!=0)
-		{
-			switch(outofstage)
-			{
-				case 1://车头出台
-//					OLED_ShowString(0,12*2,(uint8_t*)"headout",12);			
-					break;
-				case 2://车尾出台
-//					OLED_ShowString(0,12*2,(uint8_t*)"backout",12);						
-					break;
-				case 3://左侧出台
-//					OLED_ShowString(0,12*2,(uint8_t*)"leftout",12);						
-					break;
-				case 4://右侧出台
-//					OLED_ShowString(0,12*2,(uint8_t*)"rightout",12);						
-					break;
-			}
-			outofstage=0;
-		}
-		sprintf(text,"FL:%.2f  FR:%.2f",front_infrafot_distanceL,front_infrafot_distanceR);
-//		OLED_ShowString(0,12*0,(uint8_t*)text,12);	
-		sprintf(text,"l:%.2f  r:%.2f",left_infrafot_distance,right_infrafot_distance);
-//		OLED_ShowString(0,12*1,(uint8_t*)text,12);	
-//		OLED_Refresh();
-    osDelay(1);
+		lcd_show_string(10, 140, 150, 32, 16, text, RED);			
+
+    osDelay(10);
   }
   /* USER CODE END ScanTask */
 }
@@ -628,7 +695,7 @@ void OpenmvConnect(void const * argument)
   for(;;)
   {
 		
-    osDelay(1);
+    osDelay(10);
   }
   /* USER CODE END OpenmvConnect */
 }
@@ -643,21 +710,75 @@ void OpenmvConnect(void const * argument)
 void Test(void const * argument)
 {
   /* USER CODE BEGIN Test */
-
+//	forward(vel);
+//	spin(600);
   /* Infinite loop */
 	//state: 0前进 1后退 2旋转
   for(;;)
   {
-
+		/*检测台边回中检测逻辑：
+		-->起始0--检测到台边-->1--回到台中(ticktime>time)-->2
+		|																									  |
+		-------------------<--转一定角度(ticktime>spintime)--	
 		
-//		if(GD1==1)
+		*/
+//		if(state==0)
+//		{
+//			if(GD1||GD2||GD3||GD4)
 //			{
 //				state=1;
-//				state_change=1;
-
-				
+//				state_change=1;	
 //			}
-    osDelay(1);
+//		}
+//		
+//		if(state_change==1)
+//		{
+//			
+//			switch(state)
+//			{
+//				case 0:
+//					ticktime=0;
+//					forward(vel);
+//					break;
+//				case 1:
+//					time=ticktime;
+//					ticktime=0;
+//					forward(-vel);
+//					break;
+//				case 2:
+//					spin(600);
+//					ticktime=0;
+//					break;				
+//			}		
+//			state_change=0;
+//			lcd_clear(BLACK);
+
+//		}
+
+//		if(x_translation>500)
+//		{
+//			spin(200);
+//		}
+//		else if(x_translation<-500)
+//		{
+//			spin(-200);
+//		}
+//		else
+//			forward(0);
+
+		if(x_translation>200)
+		{
+			forward(200);
+		}
+		else if(x_translation<200)
+		{
+			forward(-200);
+		}
+		else
+			forward(0);
+
+
+    osDelay(10);
   }
   /* USER CODE END Test */
 }
@@ -676,25 +797,35 @@ void TickTask(void const * argument)
   for(;;)
   {
 		ticktime+=10;
-		if(state==0)
-		{
-			
-		}
-		else if(state==1)
-		{
-			if(ticktime>=time)
-			{
-				state=2;
-				state_change=1;
-			}
-		}
-		else
-		{
-			if(ticktime>=spintime)
-			{
-				state=0;
-			}
-		}
+//		if(state==0)
+//		{
+//			
+//		}
+//		else if(state==1)
+//		{
+//			if(ticktime>=time)
+//			{
+//				state=2;
+//				state_change=1;
+//			}
+//		}
+//		else
+//		{
+//			if(ticktime>=spintime)
+//			{
+//				state=0;
+//			}
+//		}
+	if(ticktime>=100000)
+	{
+		vTaskDelete(scanTaskHandle);
+		vTaskDelete(moveHandle);
+		lcd_clear(BLACK);
+		sprintf(text,"-----------timeout-----------");
+		lcd_show_string(10, 160, 240, 32, 16, text, RED);
+		
+	}
+		
     osDelay(10);
   }
   /* USER CODE END TickTask */
@@ -753,7 +884,7 @@ void KeyTask(void const * argument)
 					}
 					else if(key[i].key_sta==GPIO_PIN_RESET&&i==3)
 					{
-						long_time+=1;
+						long_time+=10;
 					}
 					
 				break;
