@@ -32,13 +32,14 @@ uint8_t Uart3_Rx_Cnt = 0;		//接收缓冲计数
 uint8_t bRxBuffer[RXBUFFERSIZE];			//接收中断缓冲
 
 //以下为串口3需要的变量
+bool find=0;
 uint8_t RxData;
 
 uint8_t receive_data[13];
 uint8_t Serial_RxFlag;					//定义接收数据包标志位
 int tag_id;
-int x_translation;  //apriltag码偏离openmv镜头中心的相对位移 
-int distance;		//apriltag码距离openmv镜头中心的相对距离
+int x_translation=0;  //apriltag码偏离openmv镜头中心的相对位移 
+int x_rotation=1800000;		//apriltag码距离openmv镜头中心的相对距离
 int Sign;			//标志位
 uint8_t Serial_RxFlag;					//定义接收数据包标志位
 /* USER CODE END 0 */
@@ -133,7 +134,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* USART1 interrupt Init */
-    HAL_NVIC_SetPriority(USART1_IRQn, 6, 0);
+    HAL_NVIC_SetPriority(USART1_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE BEGIN USART1_MspInit 1 */
 
@@ -163,7 +164,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     /* USART3 interrupt Init */
-    HAL_NVIC_SetPriority(USART3_IRQn, 6, 0);
+    HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
   /* USER CODE BEGIN USART3_MspInit 1 */
 
@@ -265,7 +266,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	}
 	if(huart==&huart3)//帧头0xAA,0xAE,结尾标志位BF:>0;CF:<0;帧尾0xAC
 	{
-
 			if (RxState == 0)
 			{
 				if (RxData == 0xAA)			//如果数据确实是包头
@@ -305,13 +305,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			tag_id = receive_data[3] << 24 | receive_data[2] << 16 | receive_data[1] << 8 | receive_data[0];//位移运算，将hex16进制转换成int整型
 			if(receive_data[12] == 0xBF)
 			{
+				find=1;
 				x_translation = receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4];
 			}
 			else if(receive_data[12] == 0xCF)
 			{
+				find=1;
 				x_translation = -(receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4]);
 			}
-			distance = receive_data[11] << 24 | receive_data[10] << 16 | receive_data[9] << 8 | receive_data[8];
+			else if(receive_data[12] == 0xAF)
+			{
+				find=0;
+			}
+			x_rotation = receive_data[11] << 24 | receive_data[10] << 16 | receive_data[9] << 8 | receive_data[8];
 		HAL_UART_Receive_IT(&huart3, (uint8_t *)&RxData, 1);
 	}
 }
