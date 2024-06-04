@@ -49,6 +49,7 @@ fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 fightrobot\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 fightrobot\main.o: ../Core/Inc/adc.h
 fightrobot\main.o: ../Core/Inc/can.h
+fightrobot\main.o: ../Core/Inc/dma.h
 fightrobot\main.o: ../Core/Inc/usart.h
 fightrobot\main.o: ../Core/Inc/gpio.h
 fightrobot\main.o: ../Core/Inc/fsmc.h

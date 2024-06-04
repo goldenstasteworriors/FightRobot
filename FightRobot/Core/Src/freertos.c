@@ -28,7 +28,6 @@
 #include "bsp_can.h"
 #include "pid.h"
 #include "mytype.h"
-#include "oled.h"
 #include "bmp.h"
 #include "stdio.h"
 #include "math.h"
@@ -39,6 +38,9 @@
 #include "usart.h"
 #include "lcd.h"
 #include "adc.h"
+
+
+#include "my_uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -88,7 +90,12 @@ double front_dis_err=0;
 uint8_t outofstage=0;
 uint16_t v_push_box=200;
 uint8_t x = 0;
-
+int old_x_translation=0;
+uint8_t xiatai_dir=0;//下台面对的方向 不用转：1 要转：2 左边掉：3 右边掉：4
+uint8_t xiatai_state=0;//实际下台状态
+bool xiatai_change=0;
+bool xiatai=0;
+bool shangtaiflag=1;
 //传感器量
 uint16_t ADValue1;
 uint16_t ADValue2;
@@ -113,17 +120,19 @@ uint16_t HD1;
 uint16_t HD2;
 
 uint32_t ticktime=0;
+uint32_t ticktime_last=0;
 uint32_t spintime=1000;
-uint32_t chaoshitime=100000;
-uint16_t tuikuaitime=50000;
+uint32_t chaoshitime=200000;
+uint32_t tuikuaitime=100000;
 uint16_t long_time=0;
 uint16_t shangtaitime1=500;//下台后向前撞以对正的时间
 uint16_t shangtaitime2=2000;//下台对正后冲上台的时间
 uint16_t	zhengduihuiducha=700;//正对灰度差，待测
-uint16_t zhongxinhuidu1=2600;//灰度1的中心灰度，待测
+//uint16_t zhongxinhuidu1=2600;//灰度1的中心灰度，待测
+uint16_t zhongxinhuidu1=2500;//灰度1的中心灰度，待测
 uint16_t zhongxinhuidu2=3500;//灰度2的中心灰度，待测
-uint16_t xiataihuidu1=1800;//灰度1的下台灰度，待测
-uint16_t xiataihuidu2=2000;//灰度2的下台灰度，待测
+uint16_t xiataihuidu1=2200;//灰度1的下台灰度，待测
+uint16_t xiataihuidu2=2200;//灰度2的下台灰度，待测
 
 
 //实际判断量
@@ -133,24 +142,59 @@ bool turn_left=0;
 bool turn_right=0;
 bool xuntaitest=0;
 bool xuntai=0;
-bool zhengduitest=0;
+bool zhengduitest=1;
 bool tuichetest=0;
 bool keep_spin=0;
-bool xiataiflag=0;
 bool huizhong=0;
-bool diaotai=0;
 bool zhengduikuai=0;
+bool findkuai=0;
 bool find_then_zhengduikuai=1;
 bool openmvxuntai=1;
 bool x_rotation_flag=1;
-
+bool x_not_change=0;
+bool zhengduiche=0;
+bool tui=0;
 uint8_t kuai=2;
 
 //debug使用
-	int vel=1800;
+	int vel_che=5000;
+	int vel_kuai=1500;
 	uint8_t state=0;//0:前进   1:后退   2:前进
 	bool state_change=0;
 	uint32_t time=0;
+	
+	
+#pragma import(__use_no_semihosting)             
+//标准库需要的支持函数    
+struct __FILE 
+{ 
+	int handle; 
+}; 
+ 
+FILE __stdout;       
+//定义_sys_exit()以避免使用半主机模式    
+void _sys_exit(int x) 
+{ 
+	x = x; 
+} 
+
+	
+float pitch,roll,yaw; 		//欧拉角:俯仰角，滚转角，偏航角
+short aacx,aacy,aacz;		//加速度传感器原始数据  加速度
+short gyrox,gyroy,gyroz;	//陀螺仪原始数据  角速度
+short temp;					//MPU温度
+uint8_t str_buff[64];
+uint8_t str_buff1[64]="俯仰角:";		//pitch
+uint8_t str_buff2[64]="偏航角:";		//yaw
+uint8_t str_buff3[64]="翻滚角:";		//roll
+uint8_t str_buff4[64]="温度值:";
+ 
+struct MPU6050				//MPU6050结构体
+{
+	u8 flag;				//采集成功标志位
+	u8 speed;				//上报速度
+}mpu6050;					//唯一结构体变量
+
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
 osThreadId moveHandle;
@@ -164,6 +208,15 @@ osThreadId xiataiHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+
+/**
+  * @brief  MPU6050数据上报
+  * @param  无
+  * @retval 无
+  */
+
+
+
 double max(double L)	
 {
 	if(L<80)
@@ -192,10 +245,26 @@ void forward(int vel)
 
 void forward_spin(int vel)
 {
+	if(x_not_change==0){
 		set_spd[1]=-(vel);
 		set_spd[3]=vel-x_translation/10;
 		set_spd[2]=vel-x_translation/10;
-		set_spd[0]=-(vel);
+		set_spd[0]=-(vel);}
+	else 
+	{
+		set_spd[1]=-vel;
+		set_spd[3]=vel;
+		set_spd[2]=vel;
+		set_spd[0]=-vel;
+	}
+}
+
+void forward_pian(int pianzhi)
+{
+		set_spd[1]=-(vel_kuai);
+		set_spd[3]=vel_kuai+pianzhi;
+		set_spd[2]=vel_kuai+pianzhi;
+		set_spd[0]=-(vel_kuai);	
 }
 
 //上台，前轮转的比后轮快
@@ -238,12 +307,14 @@ bool hongwai_find(double L)
 void find_enermy()
 {
 
+//	if((GD5==0&&hongwai_find(L1))||(GD5==0&&hongwai_find(L2)))
 	if(GD5==0&&hongwai_find(L1)&&hongwai_find(L2))
 	{
 		enermy_find=1;
 		enermy_front=1;
 		turn_left=0;
 		turn_right=0;
+		zhengduiche=1;
 	}
 	else if(hongwai_find(L1))
 	{
@@ -283,7 +354,6 @@ void find_enermy()
 		turn_left=0;
 		enermy_find=0;
 		enermy_front=0;
-		keep_spin=0;
 	}
 }
 
@@ -310,13 +380,29 @@ void scan(void)
     L3= max(61.119*pow(Voltage3,-1.092));
     L4= max(61.119*pow(Voltage4,-1.092));
 
+			if(GD1&&GD2)
+			{
+				xiatai_dir=1;
+				xiatai_change=1;
+			}
+			else if(GD3&&GD4)
+			{
+				xiatai_dir=2;
+				xiatai_change=1;			
+			}
+			else if(GD1&&GD3)
+			{
+				xiatai_dir=3;
+				xiatai_change=1;			
+			}
+			else if(GD2&&GD4)
+			{
+				xiatai_dir=4;
+				xiatai_change=1;			
+			}
+			
 		find_enermy();
-//		if(HD1>xiataihuidu&&HD1>xiataihuidu)//这里会不会出现出去一半就识别出这个的情况？
-//		{
-//			osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
-//			xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
-//			vTaskDelete(NULL);
-//		}
+
 
 
 		
@@ -415,7 +501,7 @@ void MX_FREERTOS_Init(void) {
   scanTaskHandle = osThreadCreate(osThread(scanTask), NULL);
 
   /* definition and creation of openmvConnect */
-  osThreadDef(openmvConnect, OpenmvConnect, osPriorityNormal, 0, 128);
+  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
   openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
 
   /* definition and creation of tset */
@@ -423,7 +509,7 @@ void MX_FREERTOS_Init(void) {
 //  tsetHandle = osThreadCreate(osThread(tset), NULL);
 
   /* definition and creation of tick */
-  osThreadDef(tick, TickTask, osPriorityRealtime, 0, 128);
+  osThreadDef(tick, TickTask, osPriorityHigh, 0, 128);
   tickHandle = osThreadCreate(osThread(tick), NULL);
 
   /* definition and creation of key */
@@ -460,6 +546,13 @@ void StartDefaultTask(void const * argument)
 	CAN_Filter_Config();
 	HAL_CAN_Start(&hcan);
 	HAL_CAN_ActivateNotification(&hcan,CAN_IT_RX_FIFO0_MSG_PENDING);
+	User_USART_Init(&JY901_data);
+//	while(mpu_dmp_init())                            //初始化mpu_dmp库
+// 	{
+//		printf("Initialization failed！\r\n");		//串口初始化失败上报
+//	}
+	mpu6050.flag = 0;          //采集成功标志位初始化
+	mpu6050.speed = 0;				//上报速度初始化
 //	HAL_TIM_Base_Start_IT(&htim6);
 
 	printf("OK\r\n");
@@ -471,6 +564,12 @@ void StartDefaultTask(void const * argument)
 	pid_apriltag_d.deadband=1000;//待调
 	
   lcd_clear(BLACK);
+	
+  osThreadDef(tick, TickTask, osPriorityHigh, 0, 128);
+  tickHandle = osThreadCreate(osThread(tick), NULL);
+  osThreadDef(key, KeyTask, osPriorityRealtime, 0, 128);
+  keyHandle = osThreadCreate(osThread(key), NULL);
+	
 	vTaskDelete(xiataiHandle);
 //	forward(vel);
 //	spin(vel);
@@ -483,46 +582,45 @@ void StartDefaultTask(void const * argument)
   {
 		if(key[1].flag==1)
 		{
-			vel+=100;
+			vel_che+=100;
 			key[1].flag=0;
 		}
-//		else if(key[1].flag==2)
-//		{
-//			vel-=100;
-//			key[1].flag=0;
-//		}
-		sprintf(text,"vel=%d",vel);
+
+		sprintf(text,"vel_che=%d",vel_che);
 		lcd_show_string(10, 140, 60, 32, 16, text, RED);			
 			
-//		if(x_translation>pid_apriltag_d.deadband)//待调
-//		{
+		ADValue1=get_adc(&hadc1);
+		ADValue2=get_adc(&hadc1);
+		ADValue3=get_adc(&hadc1);
+		ADValue4=get_adc(&hadc1);
 
-//			OLED_ShowString(0,12*0,(uint8_t*)"turn right",12 );
-//		}
-//		else if(x_translation<-pid_apriltag_d.deadband)//待调
-//		{
-//			OLED_ShowString(0,12*0,(uint8_t*)"turn left",12 );
-//		}
-//		else 
-//		{
-//			OLED_ShowString(0,12*0,(uint8_t*)"go!",12 );
-//		}
+		HAL_ADC_Stop(&hadc1);
+
 	
-//		OLED_Refresh();
-//		if(abs(x_translation)>pid_apriltag_d.deadband)
-//		{
-//			pid_calc(&pid_apriltag_x, x_translation, 0);	
-//			set_spd[0]=	set_spd[1]=	pid_apriltag_x.pos_out;
-//			set_spd[2]=	set_spd[3]=	-pid_apriltag_x.pos_out;
-//		}		
-//		else if(distance<touch_distance)
-//		{	
-//			set_spd[0]=	set_spd[1]=set_spd[2]=	set_spd[3]=	v_push_box;
-//			
-//		}
-//		HAL_Delay(300);
-//		vTaskDelete(NULL);
+		Voltage1 = (float)ADValue1 / 4095 * 3.3;
+		Voltage2 = (float)ADValue2 / 4095 * 3.3;
+		Voltage3 = (float)ADValue3 / 4095 * 3.3;
+		Voltage4 = (float)ADValue4 / 4095 * 3.3;
+	
+	
+    L1= max(61.119*pow(Voltage1,-1.092));
+    L2= max(61.119*pow(Voltage2,-1.092));
+    L3= max(61.119*pow(Voltage3,-1.092));
+    L4= max(61.119*pow(Voltage4,-1.092));
+		
+		
+		sprintf(text,"L1=%f",L1);
+		lcd_show_string(10, 60, 120, 32, 16, text, RED);
+	
 
+		sprintf(text,"L2=%f",L2);
+		lcd_show_string(10, 80, 120, 32, 16, text, RED);
+
+		sprintf(text,"L3=%f",L3);
+		lcd_show_string(10, 100, 120, 32, 16, text, RED);
+
+		sprintf(text,"L4=%f",L4);
+ 		lcd_show_string(10, 120, 120, 32, 16, text, RED);	
     osDelay(10);
   }
 
@@ -556,8 +654,10 @@ void MoveTask(void const * argument)
 	while(key[0].flag!=1)
 	{
 	}
+
 	ticktime=0;
 	vTaskDelete(defaultTaskHandle);
+
   /* Infinite loop */
   for(;;)
   {
@@ -571,12 +671,18 @@ void MoveTask(void const * argument)
 									pid_spd[3].pos_out);
 		if(can_get_flag==0||can_get_flag==1||can_get_flag==2||can_get_flag==3)
 		{
-			printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
-										can_get_flag,moto_chassis[can_get_flag].total_angle,moto_chassis[can_get_flag].speed_rpm,
-										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);
+//			printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
+//										can_get_flag,moto_chassis[can_get_flag].total_angle,moto_chassis[can_get_flag].speed_rpm,
+//										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);
 				
 			can_get_flag=4;
 		}
+//			printf("id:%d\r\n",tag_id);
+//			printf("x_translation:%d\r\n",x_translation);		
+//			printf("x_rotation:%d\r\n",x_rotation);
+//			printf("%d\r\n",x_rotation-1800000);
+			if(x_not_change==0)
+				printf("find");
 		
 		
 //打印lcd信息
@@ -607,7 +713,11 @@ void MoveTask(void const * argument)
 			strcat(text,"nooo");
 		}
 		lcd_show_string(10, 140, 150, 32, 16, text, RED);	
-		
+		if(xiatai)
+		{
+			sprintf(text,"XIATAI");
+			lcd_show_string(10, 60, 120, 32, 16, text, RED);
+		}
 
 		
 		sprintf(text,"L1=%f",L1);
@@ -665,15 +775,25 @@ void MoveTask(void const * argument)
 		lcd_show_string(10, 220, 240, 32, 16, text, RED);
 		
 		
-		sprintf(text,"state=%u",state);
+		sprintf(text,"xiataistate=%u",xiatai_state);
 		lcd_show_string(10, 240, 240, 32, 16, text, RED);
 		
 		sprintf(text,"ticktime=%u",ticktime);
 		lcd_show_string(10, 20, 240, 32, 16, text, RED);
-		sprintf(text,"kuai=%u",kuai);
-		lcd_show_string(10, 40, 240, 32, 16, text, RED);
+//		sprintf(text,"x_not_change=%u",x_not_change);
+//		lcd_show_string(10, 40, 240, 32, 16, text, RED);
 		
-	
+
+//		if(key[1].flag!=1)
+//		{
+//			forward(0);
+//			vTaskDelete(NULL);
+//		}
+
+
+
+
+//		if(key[0].flag==1){forward(0);vTaskDelete(NULL);}
 		osDelay(10);
   }
   /* USER CODE END MoveTask */
@@ -689,68 +809,93 @@ void MoveTask(void const * argument)
 void PushBoxTask(void const * argument)
 {
   /* USER CODE BEGIN PushBoxTask */
-//	forward(-3500);
-//	osDelay(2000);
+
 	
 //	spin(-1200);
 //	osDelay(1500);
+	if(shangtaiflag)
+	{
+		forward(-4000);
+		osDelay(2000);
+		shangtaiflag=0;
+	}
   /* Infinite loop */
   for(;;)
   {
 		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
 			{
+				xiatai=1;
 				osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
 				xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
-				vTaskDelete(pushBoxHandle);
+				vTaskDelete(openmvConnectHandle);
+				openmvConnectHandle=NULL;
 				vTaskDelete(NULL);
 				openmvxuntai=0;
 			}
 
+
 			if(GD1||GD2)
 			{
-				forward(-vel);
-				osDelay(2000);
+				xiatai_dir=1;
+				tui=1;
+				forward(-2000);
+				osDelay(1000);
 				forward(0);
 				if(zhengduikuai==1)
 				{
 					zhengduikuai=0;
+					findkuai=0;
 					find_then_zhengduikuai=1;
 					x_translation=0;
 					kuai--;
 					openmvxuntai=1;
 				}
+				else if(findkuai)
+				{
+					findkuai=0;
+				}
 			}
 			else if(GD3||GD4)
 			{
-				forward(vel);
-				osDelay(2000);
+				tui=1;
+				findkuai=0;
+				forward(2000);
+				osDelay(1000);
 			}
 		if(zhengduikuai)
 		{
-			forward_spin(vel);
+			forward_spin(vel_kuai);
 		}
 			
-		//pushbox代码本来的地方
+		//openmvconnect代码本来的地方
 
 		if(openmvxuntai&&x_translation==0)
 		{
 			if(GD1||GD2)
 			{
-				forward(-vel);
-				osDelay(2000);
+				tui=1;
+				forward(-2000);
+				osDelay(1000);
 				forward(0);
 				if(zhengduikuai==1)
 				{
 					zhengduikuai=0;
+					findkuai=0;
 					find_then_zhengduikuai=1;
 					x_translation=0;
 					kuai--;
 				}
+				else if(findkuai)
+				{
+					findkuai=0;
+				}
 			}
 			if(GD3||GD4)
 			{
-				forward(vel);
-				osDelay(2000);			
+				tui=1;
+				findkuai=0;
+				forward(2000);
+				osDelay(1000);			
 			}
 //			else 
 //			{
@@ -759,9 +904,11 @@ void PushBoxTask(void const * argument)
 			
 			else if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
 			{
+				xiatai=1;
 				osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
 				xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
-				vTaskDelete(pushBoxHandle);
+				vTaskDelete(openmvConnectHandle);
+				openmvConnectHandle=NULL;
 				vTaskDelete(NULL);
 				openmvxuntai=0;
 			}
@@ -769,22 +916,18 @@ void PushBoxTask(void const * argument)
 			{
 				spin(-1200);
 				osDelay(1200);
-				forward(vel);
+				forward(vel_kuai);
 				osDelay(500);
 
 			}
 			else
 			{
-				forward(vel);
+				forward(3000);
 			}
 
 		}	
 
-//			printf("id:%d\r\n",tag_id);
-//			printf("x_translation:%d\r\n",x_translation);		
-//			printf("x_rotation:%d\r\n",x_rotation);
-//			printf("%d\r\n",x_rotation-1800000);
-//			printf("find=%d",find);
+
 	
     osDelay(5);
   }
@@ -806,76 +949,7 @@ void ScanTask(void const * argument)
   for(;;)
   {
 		scan();//需要赋值的：红外：FL,FR,l,r；光电：outofstage(是否和哪边出台)
-
-//		if(left_infrafot_distance!=0)
-//		{
-//			turn_left=1;
-////			OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);					
-//		}
-//		else if(right_infrafot_distance!=0)
-//		{
-//			turn_right=1;
-////			OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);					
-//		}
-//		else if(front_infrafot_distanceL!=0&&front_infrafot_distanceR==0)
-//		{
-//			turn_left=1;
-////			OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);	
-//		}
-//		else if(front_infrafot_distanceL==0&&front_infrafot_distanceR!=0)
-//		{
-//			turn_right=1;
-////			OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);	
-//		}
-//		else if(fabs(front_infrafot_distanceL-front_infrafot_distanceR)>front_dis_err)
-//		{
-//			if(front_infrafot_distanceL>front_infrafot_distanceR)
-//			{
-//				turn_right=1;
-////				OLED_ShowString(0,12*4,(uint8_t*)"turn right",12);			
-//			}
-//			else if(front_infrafot_distanceL<front_infrafot_distanceR)
-//			{
-//				turn_left=1;
-////				OLED_ShowString(0,12*4,(uint8_t*)"turn left",12);			
-//			}
-//			
-//		}
-//		else if(fabs(front_infrafot_distanceL-front_infrafot_distanceR)<front_dis_err)
-//		{
-//			go_straight=1;
-////			OLED_ShowString(0,12*4,(uint8_t*)"go",12);			
-//		}
-//		else //在车尾
-//		{
-//			
-//		}
-//		if(outofstage!=0)
-//		{
-//			switch(outofstage)
-//			{
-//				case 1://车头出台
-////					OLED_ShowString(0,12*2,(uint8_t*)"headout",12);			
-//					break;
-//				case 2://车尾出台
-////					OLED_ShowString(0,12*2,(uint8_t*)"backout",12);						
-//					break;
-//				case 3://左侧出台
-////					OLED_ShowString(0,12*2,(uint8_t*)"leftout",12);						
-//					break;
-//				case 4://右侧出台
-////					OLED_ShowString(0,12*2,(uint8_t*)"rightout",12);						
-//					break;
-//			}
-//			outofstage=0;
-//		}
-//		sprintf(text,"FL:%.2f  FR:%.2f",front_infrafot_distanceL,front_infrafot_distanceR);
-////		OLED_ShowString(0,12*0,(uint8_t*)text,12);	
-//		sprintf(text,"l:%.2f  r:%.2f",left_infrafot_distance,right_infrafot_distance);
-////		OLED_ShowString(0,12*1,(uint8_t*)text,12);	
-
-//			sprintf(text,"电机 %d :speed: %d;",can_get_flag,moto_chassis[can_get_flag].speed_rpm);
-//			lcd_show_string(10, 40, 200, 32, 16, text, RED);	
+	
 
 		
 
@@ -898,6 +972,11 @@ void OpenmvConnect(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		static bool deleteflag=0;//把pushbox删除标志位
+//		if(tui&&(GD1||GD2||GD3||GD4))
+//		{
+//			spin(600);
+//		}
 	if(find_then_zhengduikuai)
 	{
 //		if((x_rotation-1800000)>150000)
@@ -932,29 +1011,46 @@ void OpenmvConnect(void const * argument)
 		{
 			if(x_translation!=0)
 			{
+				//直接干掉推块进程
+				if(findkuai!=1)
+				{
+					vTaskDelete(pushBoxHandle);
+					pushBoxHandle=NULL;
+					deleteflag=1;
+				}
 				openmvxuntai=0;
 				if(x_translation>1000)
 				{
 					spin(-300);
+					findkuai=1;
 				}
 				else if(x_translation<-1000)
 				{
 					spin(300);
+					findkuai=1;
 				}
 				else 
 				{
-		//			diaotai=1;
 		//			zhengduikuaitest=0;
 //					if(zhengduiflag==1)
 //					{
 //					forward(0);
 //					osDelay(200);
 //					}
-					forward_spin(vel);
+//					forward_spin(vel_kuai);
+					forward(0);
 					find_then_zhengduikuai=0;
+					findkuai=1;
 					zhengduikuai=1;
 					openmvxuntai=0;
+					if(deleteflag)
+					{
+						osThreadDef(pushBox, PushBoxTask, osPriorityNormal, 0, 128);
+						pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
+						deleteflag=0;
+					}
 				}
+
 			}
 		}
 	}
@@ -984,7 +1080,6 @@ void OpenmvConnect(void const * argument)
 void Test(void const * argument)
 {
   /* USER CODE BEGIN Test */
-//		forward(vel);
 //	spin(800);
 //	shangtai(4500);
 
@@ -998,21 +1093,18 @@ void Test(void const * argument)
 		-------------------<--转一定角度(ticktime>spintime)--	
 		
 		*/
-//		if(xiataiflag)
-//		{
-//			osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
-//			xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
-//			vTaskDelete(NULL);
-//		}
+
 		
 		
 //		forward(0);
-//		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
-//		{
-//			osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
-//			xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
-//			vTaskDelete(NULL);
-//		}
+		
+		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
+		{
+			xiatai=1;
+			osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
+			xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
+			vTaskDelete(NULL);
+		}
 //		else if(huizhong)
 //		{
 //			if(abs(HD1-HD2)>zhengduihuiducha)
@@ -1022,53 +1114,81 @@ void Test(void const * argument)
 //				else
 //					forward(vel);
 //			}
-//		if(HD1<zhongxinhuidu1)
-//		{
-//			if(HD2-HD1>zhengduihuiducha)
-//			{
+		if(GD1||GD2)
+		{
+			forward(-2000);
+			osDelay(1000);
+			enermy_front=0;
+			zhengduiche=0;
+		}
+		else if(GD3||GD4)
+		{
+			forward(2000);
+			osDelay(1000);	
+			enermy_front=0;			
+			zhengduiche=0;
+		}
+		else if(enermy_front)
+		{
+				keep_spin=0;
+				forward(vel_che);
+		}	
+		else if(HD1<zhongxinhuidu1&&enermy_front==0)
+		{
+			if(HD2-HD1>zhengduihuiducha)
+			{
 
-//				forward(-vel);
+				forward(-3000);
+				while(HD1>zhongxinhuidu1+100);
 //				osDelay(1000);
-//				forward(0);
-//			}
+			}
 //			else spin(1000);
+		}
+		else if(zhengduitest)
+		{
+				if(enermy_front)
+				{
+						keep_spin=0;
+						forward(vel_che);
+				}					
+				else if(turn_left)
+				{
+					if(zhengduiche)
+					{
+						forward_pian(50);
+					}
+					else
+						spin(-800);
+				}
+				else if(turn_right)
+				{
+					if(zhengduiche)
+					{
+						forward_pian(50);
+					}
+					else					
+						spin(800);
+				}
+				else 
+				{
+					if(keep_spin==0)
+					{
+						spin(800);
+					}
+				}					
+
+		}
+
+
+
+
+
 //		}
 
-//			else if(HD1>zhongxinhuidu1&&HD2>zhongxinhuidu2)
-//			{
-//				huizhong=0;
-//			}
-//			else 
-//				spin(500);
-//		}
-//		else if(xuntai)
-//		{
-//			if(GD1||GD2)
-//			{
-//				forward(-vel);
-//				osDelay(1500);
-//			}
-//			else if(GD3||GD4)
-//			{
-//				forward(vel);
-//				osDelay(1500);			
-//			}
-//			if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
-//			{
-//				osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
-//				xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
-//				vTaskDelete(NULL);
-//			}
-//			else if(HD1<zhongxinhuidu1)
-//			{
-//				huizhong=1;
-//			}
-//			else 
-//			{
-//				spin(600);
-//			}
 
-//		}
+
+
+
 //		else if(xuntaitest)
 //		{
 //			if(state==0)
@@ -1113,85 +1233,6 @@ void Test(void const * argument)
 //			
 //		}
 //		
-//		if(zhengduitest)
-//		{
-
-//				if(enermy_front)
-//				{
-//						forward(0);
-//				}					
-//				else if(turn_left)
-//				{
-//					spin(-800);
-//				}
-//				else if(turn_right)
-//				{
-//					spin(800);
-//				}
-//				else 
-//				{
-//					if(keep_spin==0)
-//					{
-//						forward(0);
-//					}
-//				}					
-
-//		}
-//		
-
-//		
-//		
-
-
-//		else if(tuichetest)//可由zhengduitest改过来
-//		{
-//				if(GD1==0||GD2==0||GD3==0||GD4==0||GD5==0)
-//				{
-//					forward(0);
-//				}
-
-//				else if(enermy_front)
-//				{
-//						forward(1000);
-//				}					
-//				else if(turn_left)
-//				{
-//					spin(-800);
-//				}
-//				else if(turn_right)
-//				{
-//					spin(800);
-//				}
-//				else 
-//				{
-//					if(keep_spin==0)
-//					{
-//						forward(0);
-//					}
-//				}					
-
-//		}
-//		else if(diaotai)		
-//		{
-//				if(GD1||GD2||GD3||GD4)
-//				{
-//					forward(0);
-//				}
-//		}
-
-		
-
-//		if(x_translation>200)
-//		{
-//			forward(200);
-//		}
-//		else if(x_translation<200)
-//		{
-//			forward(-200);
-//		}
-//		else
-//			forward(0);
-
 
     osDelay(10);
   }
@@ -1235,6 +1276,34 @@ void TickTask(void const * argument)
 //				}
 //			}
 //		}
+	
+	if(xiatai_change&&(xiatai==0))
+	{
+		
+		if(xiatai_state==0)
+		{
+			xiatai_state=xiatai_dir;
+		}
+		else 
+		{
+			if(ticktime-ticktime_last>1000)
+			{
+				xiatai_state=xiatai_dir;
+			}
+		}
+		ticktime_last=ticktime;
+		xiatai_change=0;
+	}
+	
+	if(ticktime%3==0)
+	{
+		if(old_x_translation==x_translation)
+			x_not_change=1;
+		else 
+			x_not_change=0;
+		old_x_translation=x_translation;
+	}
+
 	if(ticktime>=chaoshitime)
 	{
 		vTaskDelete(scanTaskHandle);
@@ -1312,6 +1381,10 @@ void KeyTask(void const * argument)
 
 			}
 		}
+//		if((L3!=0)&&(L4!=0)&&(L4<40)&&(L3<40))
+//		{
+//			key[0].flag=1;
+//		}
 		
     osDelay(10);
   }
@@ -1332,6 +1405,42 @@ void XiataiTask(void const * argument)
   for(;;)
   {
 		forward(0);
+		osDelay(2000);
+		if(xiatai_state==1)
+		{
+			forward(3000);
+			osDelay(1000);
+			forward(-4000);
+			osDelay(3500);
+		}
+		else if(xiatai_state==2)
+		{
+			spin(2000);
+			osDelay(1200);
+			forward(3000);
+			osDelay(1000);
+			forward(-4000);	
+			osDelay(3500);			
+		}
+		else if(xiatai_state==3)
+		{
+			zuozhuan(2000);
+			osDelay(1200);
+			forward(3000);
+			osDelay(1500);
+			forward(-4000);	
+			osDelay(3500);
+		}
+		else if(xiatai_state==4)
+		{
+			youzhuan(2000);
+			osDelay(1200);
+			forward(3000);
+			osDelay(1500);
+			forward(-4000);	
+			osDelay(3500);
+		}
+		
 //		ticktime=0;
 //		forward(-2000);
 //		while(ticktime>shangtaitime1)
@@ -1339,11 +1448,13 @@ void XiataiTask(void const * argument)
 //		forward(2000);
 //		while(ticktime>shangtaitime2)//定死延时
 //		{}
-////	  while(HD1<&&HD2<)//灰度判断{}		
+	  while(HD1>xiataihuidu1&&HD2>xiataihuidu1)//灰度判断{}
+		{		
 
-//		osThreadDef(tset, Test, osPriorityNormal, 0, 128);
-//		tsetHandle = osThreadCreate(osThread(tset), NULL);
-//		vTaskDelete(NULL);
+		osThreadDef(tset, Test, osPriorityNormal, 0, 128);
+		tsetHandle = osThreadCreate(osThread(tset), NULL);
+		vTaskDelete(NULL);
+		}
     osDelay(1);
   }
   /* USER CODE END XiataiTask */

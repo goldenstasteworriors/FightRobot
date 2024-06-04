@@ -34,9 +34,11 @@ fightrobot\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 fightrobot\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
 fightrobot\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 fightrobot\usart.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
+fightrobot\usart.o: ../bsp/my_uart.h
+fightrobot\usart.o: ../bsp/JY901.h
+fightrobot\usart.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 fightrobot\usart.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
 fightrobot\usart.o: ../bsp/mytype.h
 fightrobot\usart.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
 fightrobot\usart.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
 fightrobot\usart.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
-fightrobot\usart.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h

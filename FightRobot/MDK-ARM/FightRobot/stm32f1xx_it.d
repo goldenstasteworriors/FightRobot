@@ -34,3 +34,7 @@ fightrobot\stm32f1xx_it.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim
 fightrobot\stm32f1xx_it.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 fightrobot\stm32f1xx_it.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 fightrobot\stm32f1xx_it.o: ../Core/Inc/stm32f1xx_it.h
+fightrobot\stm32f1xx_it.o: ../bsp/my_uart.h
+fightrobot\stm32f1xx_it.o: ../bsp/JY901.h
+fightrobot\stm32f1xx_it.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+fightrobot\stm32f1xx_it.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h

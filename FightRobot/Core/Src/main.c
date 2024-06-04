@@ -21,6 +21,7 @@
 #include "cmsis_os.h"
 #include "adc.h"
 #include "can.h"
+#include "dma.h"
 #include "usart.h"
 #include "gpio.h"
 #include "fsmc.h"
@@ -92,12 +93,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_CAN_Init();
   MX_USART1_UART_Init();
   MX_USART3_UART_Init();
   MX_FSMC_Init();
   MX_ADC1_Init();
   MX_ADC3_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 	HAL_ADCEx_Calibration_Start(&hadc1);    
 	HAL_ADCEx_Calibration_Start(&hadc3);    
