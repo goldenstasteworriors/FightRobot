@@ -38,7 +38,7 @@
 #include "usart.h"
 #include "lcd.h"
 #include "adc.h"
-
+#include "math.h"
 
 #include "my_uart.h"
 /* USER CODE END Includes */
@@ -96,6 +96,7 @@ uint8_t xiatai_state=0;//实际下台状态
 bool xiatai_change=0;
 bool xiatai=0;
 bool shangtaiflag=1;
+bool tuikuaiflag=1;
 //传感器量
 uint16_t ADValue1;
 uint16_t ADValue2;
@@ -134,10 +135,23 @@ uint16_t zhongxinhuidu2=3500;//灰度2的中心灰度，待测
 uint16_t xiataihuidu1=2200;//灰度1的下台灰度，待测
 uint16_t xiataihuidu2=2200;//灰度2的下台灰度，待测
 
+uint16_t turn90=600;
+uint16_t turn180=1200;
+uint16_t turn360=2200;
+
+bool turn90flag=0;
+bool turn180flag=0;
+bool turn360flag=0;
+
+double JY901_ANGLE1=0;
+double JY901_ANGLE2=0;
+double JY901_ANGLE3=0;
+double JY901_ANGLE4=0;
 
 //实际判断量
 bool enermy_find=0;
 bool enermy_front=0;
+bool enermy_go=0;//这个是只要之前曾经检测到就先撞
 bool turn_left=0;
 bool turn_right=0;
 bool xuntaitest=0;
@@ -315,6 +329,8 @@ void find_enermy()
 		turn_left=0;
 		turn_right=0;
 		zhengduiche=1;
+		enermy_go=1;
+		
 	}
 	else if(hongwai_find(L1))
 	{
@@ -505,8 +521,8 @@ void MX_FREERTOS_Init(void) {
   openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
 
   /* definition and creation of tset */
-//  osThreadDef(tset, Test, osPriorityNormal, 0, 128);
-//  tsetHandle = osThreadCreate(osThread(tset), NULL);
+  osThreadDef(tset, Test, osPriorityNormal, 0, 128);
+  tsetHandle = osThreadCreate(osThread(tset), NULL);
 
   /* definition and creation of tick */
   osThreadDef(tick, TickTask, osPriorityHigh, 0, 128);
@@ -778,8 +794,11 @@ void MoveTask(void const * argument)
 		sprintf(text,"xiataistate=%u",xiatai_state);
 		lcd_show_string(10, 240, 240, 32, 16, text, RED);
 		
-		sprintf(text,"ticktime=%u",ticktime);
-		lcd_show_string(10, 20, 240, 32, 16, text, RED);
+//		sprintf(text,"ticktime=%u",ticktime);
+//		lcd_show_string(10, 20, 240, 32, 16, text, RED);
+		
+		sprintf(text,"e:%u",enermy_front);
+		lcd_show_string(10, 20, 240, 32, 16, text, RED);		
 //		sprintf(text,"x_not_change=%u",x_not_change);
 //		lcd_show_string(10, 40, 240, 32, 16, text, RED);
 		
@@ -813,12 +832,16 @@ void PushBoxTask(void const * argument)
 	
 //	spin(-1200);
 //	osDelay(1500);
-	if(shangtaiflag)
-	{
-		forward(-4000);
-		osDelay(2000);
-		shangtaiflag=0;
-	}
+//	if(shangtaiflag)
+//	{
+////		forward(-4000);
+////		osDelay(2000);
+////		shangtaiflag=0;
+//		spin(2000);
+//		osDelay(turn90);
+//		forward(0);
+//		osDelay(20000);
+//	}
   /* Infinite loop */
   for(;;)
   {
@@ -862,11 +885,16 @@ void PushBoxTask(void const * argument)
 				forward(2000);
 				osDelay(1000);
 			}
-		if(zhengduikuai)
-		{
-			forward_spin(vel_kuai);
-		}
-			
+			else if(zhengduikuai)
+			{
+				forward_spin(vel_kuai);
+			}
+			else if(turn360flag)
+			{
+				turn360flag=0;
+				spin(-2000);
+				osDelay(turn360);
+			}
 		//openmvconnect代码本来的地方
 
 		if(openmvxuntai&&x_translation==0)
@@ -915,9 +943,9 @@ void PushBoxTask(void const * argument)
 			else if(HD1<zhongxinhuidu1)
 			{
 				spin(-1200);
-				osDelay(1200);
+				osDelay(300);
 				forward(vel_kuai);
-				osDelay(500);
+				osDelay(200);
 
 			}
 			else
@@ -1062,6 +1090,7 @@ void OpenmvConnect(void const * argument)
 		{
 			osThreadDef(tset, Test, osPriorityNormal, 0, 128);
 			tsetHandle = osThreadCreate(osThread(tset), NULL);
+			tuikuaiflag=0;
 			vTaskDelete(pushBoxHandle);
 			vTaskDelete(NULL);
 		}
@@ -1095,7 +1124,8 @@ void Test(void const * argument)
 		*/
 
 		
-		
+//		spin(500);
+
 //		forward(0);
 		
 		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
@@ -1119,20 +1149,17 @@ void Test(void const * argument)
 			forward(-2000);
 			osDelay(1000);
 			enermy_front=0;
+			enermy_go=0;
 			zhengduiche=0;
 		}
 		else if(GD3||GD4)
 		{
 			forward(2000);
 			osDelay(1000);	
-			enermy_front=0;			
+			enermy_front=0;	
+			enermy_go=0;			
 			zhengduiche=0;
 		}
-		else if(enermy_front)
-		{
-				keep_spin=0;
-				forward(vel_che);
-		}	
 		else if(HD1<zhongxinhuidu1&&enermy_front==0)
 		{
 			if(HD2-HD1>zhengduihuiducha)
@@ -1144,9 +1171,7 @@ void Test(void const * argument)
 			}
 //			else spin(1000);
 		}
-		else if(zhengduitest)
-		{
-				if(enermy_front)
+				if(enermy_go)
 				{
 						keep_spin=0;
 						forward(vel_che);
@@ -1169,13 +1194,13 @@ void Test(void const * argument)
 					else					
 						spin(800);
 				}
-				else 
-				{
-					if(keep_spin==0)
-					{
+		else if(keep_spin==0)
+		{
+
+
 						spin(800);
-					}
-				}					
+					
+									
 
 		}
 
@@ -1276,6 +1301,10 @@ void TickTask(void const * argument)
 //				}
 //			}
 //		}
+	if(tuikuaiflag&&((ticktime%20000)==0))
+	{
+		turn360flag=1;
+	}
 	
 	if(xiatai_change&&(xiatai==0))
 	{
