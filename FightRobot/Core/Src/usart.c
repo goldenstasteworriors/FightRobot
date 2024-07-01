@@ -43,6 +43,8 @@ int tag_id;
 int x_translation=0;  //apriltag码偏离openmv镜头中心的相对位移 
 int x_rotation=1800000;		//apriltag码距离openmv镜头中心的相对距离
 int Sign;			//标志位
+
+int x_translation_no=0;
 uint8_t Serial_RxFlag;					//定义接收数据包标志位
 /* USER CODE END 0 */
 
@@ -410,13 +412,27 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 			if(receive_data[12] == 0xBF)
 			{
 				find=1;
-				x_translation = receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4];
+				if(tag_id==1||tag_id==0)
+				{
+					x_translation = receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4];
+				}
+				else if(tag_id==2)
+				{
+					x_translation_no = receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4];
+				}
 			}
 			else if(receive_data[12] == 0xCF)
 			{
 				find=1;
-				x_translation = -(receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4]);
-			}
+				if(tag_id==1||tag_id==0)
+				{
+					x_translation = -(receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4]);
+				}
+				else if(tag_id==2)
+				{
+					x_translation_no = receive_data[7] << 24 | receive_data[6] << 16 | receive_data[5] << 8 | receive_data[4];
+				}
+			}				
 			else if(receive_data[12] == 0xAF)
 			{
 				find=0;

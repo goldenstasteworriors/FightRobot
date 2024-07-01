@@ -70,6 +70,7 @@ extern int tag_id;
 extern int x_translation;
 extern int x_rotation;
 extern keys key[4];
+extern int x_translation_no;
 
 s16 torque=500;
 uint8_t data[8]={1,2,3,4,5,6,7,8};
@@ -93,44 +94,47 @@ uint8_t x = 0;
 int old_x_translation=0;
 uint8_t xiatai_dir=0;//下台面对的方向 不用转：1 要转：2 左边掉：3 右边掉：4
 uint8_t xiatai_state=0;//实际下台状态
-bool xiatai_change=0;
-bool xiatai=0;
-bool shangtaiflag=1;
-bool tuikuaiflag=1;
+volatile bool xiatai_change=0;
+volatile bool xiatai=0;
+volatile bool shangtaiflag=1;
+volatile bool tuikuaiflag=1;
 //传感器量
-uint16_t ADValue1;
-uint16_t ADValue2;
-uint16_t ADValue3;
-uint16_t ADValue4;
+volatile uint16_t ADValue1;
+volatile uint16_t ADValue2;
+volatile uint16_t ADValue3;
+volatile uint16_t ADValue4;
 float Voltage1;
 float Voltage2;
 float Voltage3;
 float Voltage4;
-float L1;
-float L2;
-float L3;
-float L4;
+volatile float L1;
+volatile float L2;
+volatile float L3;
+volatile float L4;
 char text[20];
-uint16_t GD1;
-uint16_t GD2;
-uint16_t GD3;
-uint16_t GD4;
-uint16_t GD5;
+volatile uint16_t GD1;
+volatile uint16_t GD2;
+volatile uint16_t GD3;
+volatile uint16_t GD4;
+volatile uint16_t GD5;
+volatile uint16_t GD6;
+volatile uint16_t GD7;
 
-uint16_t HD1;
-uint16_t HD2;
+volatile int HD1;
+volatile int HD2;
 
 uint32_t ticktime=0;
+uint32_t kuaitime=0;
 uint32_t ticktime_last=0;
 uint32_t spintime=1000;
-uint32_t chaoshitime=200000;
+uint32_t chaoshitime=2000 NJMI000;
 uint32_t tuikuaitime=100000;
 uint16_t long_time=0;
 uint16_t shangtaitime1=500;//下台后向前撞以对正的时间
 uint16_t shangtaitime2=2000;//下台对正后冲上台的时间
 uint16_t	zhengduihuiducha=700;//正对灰度差，待测
 //uint16_t zhongxinhuidu1=2600;//灰度1的中心灰度，待测
-uint16_t zhongxinhuidu1=2500;//灰度1的中心灰度，待测
+uint16_t zhongxinhuidu1=1600;//灰度1的中心灰度，待测
 uint16_t zhongxinhuidu2=3500;//灰度2的中心灰度，待测
 uint16_t xiataihuidu1=2200;//灰度1的下台灰度，待测
 uint16_t xiataihuidu2=2200;//灰度2的下台灰度，待测
@@ -142,11 +146,14 @@ uint16_t turn360=2200;
 bool turn90flag=0;
 bool turn180flag=0;
 bool turn360flag=0;
+bool enermy_go_flag=0;
 
 double JY901_ANGLE1=0;
 double JY901_ANGLE2=0;
 double JY901_ANGLE3=0;
 double JY901_ANGLE4=0;
+
+int mission_on=0;
 
 //实际判断量
 bool enermy_find=0;
@@ -166,12 +173,12 @@ bool find_then_zhengduikuai=1;
 bool openmvxuntai=1;
 bool x_rotation_flag=1;
 bool x_not_change=0;
-bool zhengduiche=0;
+
 bool tui=0;
 uint8_t kuai=2;
 
 //debug使用
-	int vel_che=5000;
+	int vel_che=3500;
 	int vel_kuai=1500;
 	uint8_t state=0;//0:前进   1:后退   2:前进
 	bool state_change=0;
@@ -275,10 +282,10 @@ void forward_spin(int vel)
 
 void forward_pian(int pianzhi)
 {
-		set_spd[1]=-(vel_kuai);
-		set_spd[3]=vel_kuai+pianzhi;
-		set_spd[2]=vel_kuai+pianzhi;
-		set_spd[0]=-(vel_kuai);	
+		set_spd[1]=-(vel_che+pianzhi);
+		set_spd[3]=vel_che;
+		set_spd[2]=vel_che;
+		set_spd[0]=-(vel_che+pianzhi);	
 }
 
 //上台，前轮转的比后轮快
@@ -312,7 +319,7 @@ void youzhuan(int vel)
 //检测/执行函数
 bool hongwai_find(double L)
 {
-	if(L<80&&L>25)
+	if(L<80&&L>20)
 		return 1;
 	else 
 		return 0;
@@ -324,12 +331,13 @@ void find_enermy()
 //	if((GD5==0&&hongwai_find(L1))||(GD5==0&&hongwai_find(L2)))
 	if(GD5==0&&hongwai_find(L1)&&hongwai_find(L2))
 	{
+		if(enermy_go==0){		enermy_go_flag=1;}
 		enermy_find=1;
 		enermy_front=1;
 		turn_left=0;
 		turn_right=0;
-		zhengduiche=1;
 		enermy_go=1;
+
 		
 	}
 	else if(hongwai_find(L1))
@@ -509,22 +517,22 @@ void MX_FREERTOS_Init(void) {
   moveHandle = osThreadCreate(osThread(move), NULL);
 
   /* definition and creation of pushBox */
-  osThreadDef(pushBox, PushBoxTask, osPriorityNormal, 0, 128);
-  pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
+//  osThreadDef(pushBox, PushBoxTask, osPriorityNormal, 0, 128);
+//  pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
 
   /* definition and creation of scanTask */
   osThreadDef(scanTask, ScanTask, osPriorityNormal, 0, 128);
   scanTaskHandle = osThreadCreate(osThread(scanTask), NULL);
 
   /* definition and creation of openmvConnect */
-  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
-  openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
+//  osThreadDef(openmvConnect, OpenmvConnect, osPriorityAboveNormal, 0, 128);
+//  openmvConnectHandle = osThreadCreate(osThread(openmvConnect), NULL);
 
   /* definition and creation of tset */
   osThreadDef(tset, Test, osPriorityNormal, 0, 128);
   tsetHandle = osThreadCreate(osThread(tset), NULL);
 
-  /* definition and creation of tick */
+//  /* definition and creation of tick */
   osThreadDef(tick, TickTask, osPriorityHigh, 0, 128);
   tickHandle = osThreadCreate(osThread(tick), NULL);
 
@@ -596,14 +604,14 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-		if(key[1].flag==1)
-		{
-			vel_che+=100;
-			key[1].flag=0;
-		}
+//		if(key[1].flag==1)
+//		{
+//			vel_che+=100;
+//			key[1].flag=0;
+//		}
 
-		sprintf(text,"vel_che=%d",vel_che);
-		lcd_show_string(10, 140, 60, 32, 16, text, RED);			
+//		sprintf(text,"vel_che=%d",vel_che);
+//		lcd_show_string(10, 140, 60, 32, 16, text, RED);			
 			
 		ADValue1=get_adc(&hadc1);
 		ADValue2=get_adc(&hadc1);
@@ -625,18 +633,18 @@ void StartDefaultTask(void const * argument)
     L4= max(61.119*pow(Voltage4,-1.092));
 		
 		
-		sprintf(text,"L1=%f",L1);
-		lcd_show_string(10, 60, 120, 32, 16, text, RED);
-	
+//		sprintf(text,"L1=%f",L1);
+//		lcd_show_string(10, 60, 120, 32, 16, text, RED);
+//	
 
-		sprintf(text,"L2=%f",L2);
-		lcd_show_string(10, 80, 120, 32, 16, text, RED);
+//		sprintf(text,"L2=%f",L2);
+//		lcd_show_string(10, 80, 120, 32, 16, text, RED);
 
-		sprintf(text,"L3=%f",L3);
-		lcd_show_string(10, 100, 120, 32, 16, text, RED);
+//		sprintf(text,"L3=%f",L3);
+//		lcd_show_string(10, 100, 120, 32, 16, text, RED);
 
-		sprintf(text,"L4=%f",L4);
- 		lcd_show_string(10, 120, 120, 32, 16, text, RED);	
+//		sprintf(text,"L4=%f",L4);
+// 		lcd_show_string(10, 120, 120, 32, 16, text, RED);	
     osDelay(10);
   }
 
@@ -667,8 +675,12 @@ void MoveTask(void const * argument)
 									1.5f,	0.1f,	0.0f	);  //4 motos angular rate closeloop.
 		pid_spd[i].deadband=50;
 	}
+
 	while(key[0].flag!=1)
 	{
+		printf("L3:%f\r\n",L3);
+		printf("L4:%f\r\n",L4);
+		printf("key[0].flag:%d\r\n",key[0].flag);		
 	}
 
 	ticktime=0;
@@ -677,6 +689,7 @@ void MoveTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+
 			for(int i=0; i<4; i++)
 			{
 				pid_calc(&pid_spd[i], moto_chassis[i].speed_rpm, set_spd[i]);
@@ -689,12 +702,18 @@ void MoveTask(void const * argument)
 		{
 //			printf("电机 %d : angle=%d ; speed: %d; current: %d; temp:%d\r\n",
 //										can_get_flag,moto_chassis[can_get_flag].total_angle,moto_chassis[can_get_flag].speed_rpm,
-//										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);
-				
-			can_get_flag=4;
+//										moto_chassis[can_get_flag].given_current,moto_chassis[can_get_flag].hall);				
+//			can_get_flag=4;
 		}
 //			printf("id:%d\r\n",tag_id);
-//			printf("x_translation:%d\r\n",x_translation);		
+//			printf("x_translation:%d\r\n",x_translation);	
+//			printf("hongwai_find(L1):%d  ",hongwai_find(L1));			
+//			printf("hongwai_find(L2):%d  ",hongwai_find(L2));	
+//			printf("enermy_go:%d  ",enermy_go);	
+//			printf("enermy_front:%d\r\n",enermy_front);	
+//			printf("kuaitime:%d",kuaitime);				
+//			printf("zhengduikuai:%d\r\n",zhengduikuai);		
+				
 //			printf("x_rotation:%d\r\n",x_rotation);
 //			printf("%d\r\n",x_rotation-1800000);
 			if(x_not_change==0)
@@ -702,57 +721,75 @@ void MoveTask(void const * argument)
 		
 		
 //打印lcd信息
-		if(turn_left)
-		{
-			sprintf(text,"turn_left");
-		}
-		else if(turn_right)
-		{
-			sprintf(text,"turnright");
-		}
-		else 
-		{
-			sprintf(text,"no___turn");
-		}
-		strcat(text,"-----");			
-		if(enermy_find&&enermy_front)
-		{
-			strcat(text,"go!!");
-		}
-	
-		else if(enermy_find)
-		{
-			strcat(text,"find");
-		}
-		else 
-		{
-			strcat(text,"nooo");
-		}
-		lcd_show_string(10, 140, 150, 32, 16, text, RED);	
-		if(xiatai)
-		{
-			sprintf(text,"XIATAI");
-			lcd_show_string(10, 60, 120, 32, 16, text, RED);
-		}
+//		if(turn_left)
+//		{
+//			sprintf(text,"turn_left");
+//		}
+//		else if(turn_right)
+//		{
+//			sprintf(text,"turnright");
+//		}
+//		else 
+//		{
+//			sprintf(text,"no___turn");
+//		}
+//		strcat(text,"-----");			
+//		if(enermy_find&&enermy_front)
+//		{
+//			strcat(text,"go!!");
+//		}
+//	
+//		else if(enermy_find)
+//		{
+//			strcat(text,"find");
+//		}
+//		else 
+//		{
+//			strcat(text,"nooo");
+//		}
+//		lcd_show_string(10, 140, 150, 32, 16, text, RED);	
+//		if(xiatai)
+//		{
+//			sprintf(text,"XIATAI");
+//			lcd_show_string(10, 60, 120, 32, 16, text, RED);
+//		}
 
 		
-		sprintf(text,"L1=%f",L1);
-		lcd_show_string(10, 60, 120, 32, 16, text, RED);
-	
+//		sprintf(text,"L1=%F",L1);
+//		lcd_show_string(10, 60, 120, 32, 16, text, RED);
+////	
 
-		sprintf(text,"L2=%f",L2);
-		lcd_show_string(10, 80, 120, 32, 16, text, RED);
+//		sprintf(text,"L2=%f",L2);
+//		lcd_show_string(10, 80, 120, 32, 16, text, RED);
 
-		sprintf(text,"L3=%f",L3);
-		lcd_show_string(10, 100, 120, 32, 16, text, RED);
+//		sprintf(text,"L3=%f",L3);
+//		lcd_show_string(10, 100, 120, 32, 16, text, RED);
 
-		sprintf(text,"L4=%f",L4);
- 		lcd_show_string(10, 120, 120, 32, 16, text, RED);	
+//		sprintf(text,"L4=%f",L4);
+// 		lcd_show_string(10, 120, 120, 32, 16, text, RED);	
 
-		
+//		sprintf(text,"GD1=%d",GD1);
+//		lcd_show_string(10, 80, 120, 32, 16, text, RED);
+////	
+
+//		sprintf(text,"GD2=%d",GD2);
+//		lcd_show_string(10, 100, 120, 32, 16, text, RED);
+
+//		sprintf(text,"GD3=%d",GD3);
+//		lcd_show_string(10, 120, 120, 32, 16, text, RED);
+
+//		sprintf(text,"GD4=%d",GD4);
+// 		lcd_show_string(10, 140, 120, 32, 16, text, RED);	
+//		
+//		sprintf(text,"GD5=%d",GD5);
+// 		lcd_show_string(10, 160, 120, 32, 16, text, RED);	
+//		
+//		sprintf(text,"GD6=%d",GD6);
+// 		lcd_show_string(10, 180, 120, 32, 16, text, RED);
 		
 		GD1=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_0);
-		sprintf(text,"GD1=%u",GD1);
+//		sprintf(text,"GD1=%u",GD1);
+//		if(GD1){forward(-2000);}
 //		if(GD1==1){		set_spd[1]=	0;
 //		set_spd[3]=0;
 //		set_spd[2]=0;
@@ -763,45 +800,62 @@ void MoveTask(void const * argument)
 //		set_spd[0]=1800;}
 //		lcd_show_string(10, 160, 240, 32, 16, text, RED);
 	
-		GD2=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_1);
-		sprintf(text,"GD2=%u",GD2);
+		GD2=0;
+//		sprintf(text,"GD2=%u",GD2);
+//		if(GD2){forward(-2000);}
 //		lcd_show_string(10, 180, 240, 32, 16, text, RED);
 
-		GD3=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_2);
-		sprintf(text,"GD3=%u",GD3);
+		GD3=0;
+//		sprintf(text,"GD3=%u",GD3);
+//		if(GD3){forward(2000);}		
 //		lcd_show_string(10, 200, 240, 32, 16, text, RED);
 	
 		GD4=HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_3);
-		sprintf(text,"GD4=%u",GD4);
+//		sprintf(text,"GD4=%u",GD4);
+//		if(GD4){forward(2000);}	
 //		lcd_show_string(10, 220, 240, 32, 16, text, RED);
 		
 		GD5=HAL_GPIO_ReadPin(GPIOF,GPIO_PIN_10);
-		sprintf(text,"GD5=%u",GD5);
-		lcd_show_string(10, 180, 240, 32, 16, text, RED);		
+//		sprintf(text,"GD5=%u",GD5);
+//		lcd_show_string(10, 180, 240, 32, 16, text, RED);	
+
+		GD6=HAL_GPIO_ReadPin(GPIOF,GPIO_PIN_8);
+//		sprintf(text,"GD6=%u",GD6);
+//		if(GD6){vel_che=5000;}
+//		else {vel_che=2000;}
+		
+		GD7=HAL_GPIO_ReadPin(GPIOF,GPIO_PIN_7);
+//		sprintf(text,"GD7=%u",GD7);
+		
+		
 		
 		HD1=get_adc(&hadc3);
 		HD2=get_adc(&hadc3);
 
 		HAL_ADC_Stop(&hadc3);
 
-		sprintf(text,"HD1=%u",HD1);
-		lcd_show_string(10, 200, 240, 32, 16, text, RED);
-		
-		sprintf(text,"HD2=%u",HD2);
-		lcd_show_string(10, 220, 240, 32, 16, text, RED);
-		
-		
-		sprintf(text,"xiataistate=%u",xiatai_state);
-		lcd_show_string(10, 240, 240, 32, 16, text, RED);
+//		sprintf(text,"HD1=%u",HD1);
+//		lcd_show_string(10, 200, 240, 32, 16, text, RED);
+//		
+//		sprintf(text,"HD2=%u",HD2);
+//		lcd_show_string(10, 220, 240, 32, 16, text, RED);
+
+//		sprintf(text,"HD2-HD1=%d",HD2-HD1);
+//		lcd_show_string(10, 240, 240, 32, 16, text, RED);
+//		
+//		
+//		sprintf(text,"xiataistate=%u",xiatai_state);
+//		lcd_show_string(10, 240, 240, 32, 16, text, RED);
 		
 //		sprintf(text,"ticktime=%u",ticktime);
 //		lcd_show_string(10, 20, 240, 32, 16, text, RED);
 		
-		sprintf(text,"e:%u",enermy_front);
-		lcd_show_string(10, 20, 240, 32, 16, text, RED);		
+//		sprintf(text,"e:%u",enermy_front);
+//		lcd_show_string(10, 20, 240, 32, 16, text, RED);		
 //		sprintf(text,"x_not_change=%u",x_not_change);
 //		lcd_show_string(10, 40, 240, 32, 16, text, RED);
 		
+//		printf("%d\r\n",mission_on);
 
 //		if(key[1].flag!=1)
 //		{
@@ -834,8 +888,8 @@ void PushBoxTask(void const * argument)
 //	osDelay(1500);
 //	if(shangtaiflag)
 //	{
-////		forward(-4000);
-////		osDelay(2000);
+		forward(-5500);
+		osDelay(3000);
 ////		shangtaiflag=0;
 //		spin(2000);
 //		osDelay(turn90);
@@ -845,6 +899,9 @@ void PushBoxTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		mission_on=1;
+
+		
 		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
 			{
 				xiatai=1;
@@ -855,15 +912,16 @@ void PushBoxTask(void const * argument)
 				vTaskDelete(NULL);
 				openmvxuntai=0;
 			}
-
-
-			if(GD1||GD2)
+			else if(GD1||GD2)
 			{
 				xiatai_dir=1;
 				tui=1;
 				forward(-2000);
-				osDelay(1000);
+				osDelay(500);
 				forward(0);
+				osDelay(200);
+				spin(-1200);
+				osDelay(200);
 				if(zhengduikuai==1)
 				{
 					zhengduikuai=0;
@@ -883,7 +941,16 @@ void PushBoxTask(void const * argument)
 				tui=1;
 				findkuai=0;
 				forward(2000);
-				osDelay(1000);
+				osDelay(500);
+			}
+			else 	if(kuaitime>=2000)
+			{
+				zhengduikuai=0;
+				findkuai=0;
+				find_then_zhengduikuai=1;
+				x_translation=0;
+				kuaitime=0;
+				openmvxuntai=1;
 			}
 			else if(zhengduikuai)
 			{
@@ -903,8 +970,11 @@ void PushBoxTask(void const * argument)
 			{
 				tui=1;
 				forward(-2000);
-				osDelay(1000);
+				osDelay(500);
 				forward(0);
+				osDelay(200);
+				spin(-1200);
+				osDelay(200);
 				if(zhengduikuai==1)
 				{
 					zhengduikuai=0;
@@ -918,12 +988,12 @@ void PushBoxTask(void const * argument)
 					findkuai=0;
 				}
 			}
-			if(GD3||GD4)
+			else if(GD3||GD4)
 			{
 				tui=1;
 				findkuai=0;
 				forward(2000);
-				osDelay(1000);			
+				osDelay(500);			
 			}
 //			else 
 //			{
@@ -940,17 +1010,17 @@ void PushBoxTask(void const * argument)
 				vTaskDelete(NULL);
 				openmvxuntai=0;
 			}
-			else if(HD1<zhongxinhuidu1)
+			else if(HD1<zhongxinhuidu1&&(zhengduikuai!=1))
 			{
 				spin(-1200);
-				osDelay(300);
+				osDelay(500);
 				forward(vel_kuai);
 				osDelay(200);
 
 			}
 			else
 			{
-				forward(3000);
+				forward(vel_kuai);
 			}
 
 		}	
@@ -976,6 +1046,7 @@ void ScanTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		mission_on=2;
 		scan();//需要赋值的：红外：FL,FR,l,r；光电：outofstage(是否和哪边出台)
 	
 
@@ -1000,6 +1071,7 @@ void OpenmvConnect(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		mission_on=3;
 		static bool deleteflag=0;//把pushbox删除标志位
 //		if(tui&&(GD1||GD2||GD3||GD4))
 //		{
@@ -1042,17 +1114,33 @@ void OpenmvConnect(void const * argument)
 				//直接干掉推块进程
 				if(findkuai!=1)
 				{
+					kuaitime=0;
 					vTaskDelete(pushBoxHandle);
 					pushBoxHandle=NULL;
 					deleteflag=1;
 				}
 				openmvxuntai=0;
-				if(x_translation>1000)
+				if(kuaitime>=2000)
+				{
+					find_then_zhengduikuai=1;
+					x_translation=0;
+					findkuai=0;
+					zhengduikuai=0;
+					openmvxuntai=1;
+					kuaitime=0;
+					if(deleteflag)
+					{
+						osThreadDef(pushBox, PushBoxTask, osPriorityNormal, 0, 128);
+						pushBoxHandle = osThreadCreate(osThread(pushBox), NULL);
+						deleteflag=0;
+					}				
+				}
+				else if(x_translation>800)
 				{
 					spin(-300);
 					findkuai=1;
 				}
-				else if(x_translation<-1000)
+				else if(x_translation<-800)
 				{
 					spin(300);
 					findkuai=1;
@@ -1111,11 +1199,13 @@ void Test(void const * argument)
   /* USER CODE BEGIN Test */
 //	spin(800);
 //	shangtai(4500);
-
+	forward(-5000);
+	osDelay(2000);
   /* Infinite loop */
 	//state: 0前进 1后退 2旋转
   for(;;)
   {
+		mission_on=4;
 		/*检测台边回中检测逻辑：
 		-->起始0--检测到台边-->1--回到台中(ticktime>time)-->2
 		|																									  |
@@ -1124,91 +1214,125 @@ void Test(void const * argument)
 		*/
 
 		
-//		spin(500);
 
 //		forward(0);
-		
 		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
 		{
 			xiatai=1;
 			osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
 			xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
 			vTaskDelete(NULL);
-		}
-//		else if(huizhong)
-//		{
-//			if(abs(HD1-HD2)>zhengduihuiducha)
-//			{
-//				if(HD1>HD2)
-//					forward(-vel);
-//				else
-//					forward(vel);
-//			}
+		}		
 		if(GD1||GD2)
 		{
 			forward(-2000);
-			osDelay(1000);
+			osDelay(500);
 			enermy_front=0;
 			enermy_go=0;
-			zhengduiche=0;
 		}
 		else if(GD3||GD4)
 		{
 			forward(2000);
-			osDelay(1000);	
+			osDelay(500);	
 			enermy_front=0;	
 			enermy_go=0;			
-			zhengduiche=0;
-		}
-		else if(HD1<zhongxinhuidu1&&enermy_front==0)
+		}		
+		else
 		{
-			if(HD2-HD1>zhengduihuiducha)
-			{
-
-				forward(-3000);
-				while(HD1>zhongxinhuidu1+100);
-//				osDelay(1000);
-			}
-//			else spin(1000);
-		}
-				if(enermy_go)
-				{
-						keep_spin=0;
-						forward(vel_che);
-				}					
-				else if(turn_left)
-				{
-					if(zhengduiche)
-					{
-						forward_pian(50);
-					}
-					else
-						spin(-800);
-				}
-				else if(turn_right)
-				{
-					if(zhengduiche)
-					{
-						forward_pian(50);
-					}
-					else					
-						spin(800);
-				}
-		else if(keep_spin==0)
-		{
-
-
-						spin(800);
-					
-									
-
-		}
-
-
-
-
-
+			spin(800);
+		}		
+//		
+//		if(HD1<xiataihuidu1&&HD2<xiataihuidu2)
+//		{
+//			xiatai=1;
+//			osThreadDef(xiatai, XiataiTask, osPriorityNormal, 0, 128);
+//			xiataiHandle = osThreadCreate(osThread(xiatai), NULL);
+//			vTaskDelete(NULL);
 //		}
+////		else if(huizhong)
+////		{
+////			if(abs(HD1-HD2)>zhengduihuiducha)
+////			{
+////				if(HD1>HD2)
+////					forward(-vel);
+////				else
+////					forward(vel);
+////			}
+//		if(GD1||GD2)
+//		{
+//			forward(-2000);
+//			osDelay(500);
+//			enermy_front=0;
+//			enermy_go=0;
+//		}
+//		else if(GD3||GD4)
+//		{
+//			forward(2000);
+//			osDelay(500);	
+//			enermy_front=0;	
+//			enermy_go=0;			
+//		}
+////		else if(HD1<zhongxinhuidu1&&enermy_go==0)
+////		{
+////			if(HD2-HD1>zhengduihuiducha)
+////			{
+
+////				forward(-3000);
+////				while(HD1>zhongxinhuidu1+100)
+////					{
+////						if(GD1||GD2)
+////						{
+////							forward(-2000);
+////							osDelay(1000);
+////							enermy_front=0;
+////							enermy_go=0;
+////						}
+////						else if(GD3||GD4)
+////						{
+////							forward(2000);
+////							osDelay(1000);	
+////							enermy_front=0;	
+////							enermy_go=0;			
+////						}
+////					}
+////			}
+//////			else spin(1000);
+////		}
+//				if(enermy_front&&(x_translation_no<5000&&x_translation_no>-5000))
+//				{
+//					keep_spin=0;
+//					if(enermy_go_flag){forward(0);osDelay(50);enermy_go_flag=0;}
+//					else 
+//					{
+//						forward(vel_che);
+//					}
+//				}
+//				else if(enermy_go&&((x_translation_no>10000&&x_translation_no<-10000)||(x_translation_no==0)))
+//				{
+//					{
+//					if(hongwai_find(L2))
+//						forward_pian(-400);
+////							forward(vel_che);
+//					else if(hongwai_find(L1))
+//						forward_pian(400);
+////						forward(vel_che);
+//					else if((hongwai_find(L1)==0)&&(hongwai_find(L2)==0))enermy_go=0;
+//					}
+//				}
+//				else if(turn_left)
+//				{
+//						spin(-800);
+//				}
+//				else if(turn_right)
+//				{					
+//						spin(800);
+//				}
+//		else if(keep_spin==0)
+//		{
+//						spin(800);
+//		}
+
+////		}
 
 
 
@@ -1277,6 +1401,8 @@ void TickTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		if(findkuai){kuaitime++;}
+		mission_on=5;
 		ticktime+=10;
 //		if(xuntaitest)
 //		{
@@ -1338,7 +1464,7 @@ void TickTask(void const * argument)
 		vTaskDelete(scanTaskHandle);
 		vTaskDelete(moveHandle);
 		lcd_clear(BLACK);
-		sprintf(text,"-----------timeout-----------");
+//		sprintf(text,"-----------timeout-----------");
 		lcd_show_string(10, 160, 240, 32, 16, text, RED);
 		
 	}
@@ -1363,6 +1489,7 @@ void KeyTask(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+		mission_on=6;
 		key[0].key_sta=HAL_GPIO_ReadPin(GPIOE,GPIO_PIN_4);
 		key[1].key_sta=HAL_GPIO_ReadPin(GPIOE,GPIO_PIN_3);
 		key[2].key_sta=HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_2);
@@ -1375,6 +1502,7 @@ void KeyTask(void const * argument)
 					if(key[i].key_sta==GPIO_PIN_RESET)
 					{
 						key[i].jud_sta=1;
+
 					}
 				break;
 				case 1:
@@ -1399,6 +1527,7 @@ void KeyTask(void const * argument)
 						else{
 						key[i].flag=1;
 						key[i].jud_sta=0;
+						vTaskDelete(NULL);
 						}
 					}
 					else if(key[i].key_sta==GPIO_PIN_RESET&&i==3)
@@ -1410,10 +1539,11 @@ void KeyTask(void const * argument)
 
 			}
 		}
-//		if((L3!=0)&&(L4!=0)&&(L4<40)&&(L3<40))
-//		{
-//			key[0].flag=1;
-//		}
+		if((L3!=0)&&(L4!=0)&&(L4<40)&&(L3<40))
+		{
+			key[0].flag=1;
+		}
+		
 		
     osDelay(10);
   }
@@ -1430,46 +1560,58 @@ void KeyTask(void const * argument)
 void XiataiTask(void const * argument)
 {
   /* USER CODE BEGIN XiataiTask */
+		forward(0);
+		osDelay(500);
   /* Infinite loop */
   for(;;)
   {
-		forward(0);
-		osDelay(2000);
-		if(xiatai_state==1)
-		{
-			forward(3000);
-			osDelay(1000);
-			forward(-4000);
-			osDelay(3500);
-		}
-		else if(xiatai_state==2)
-		{
-			spin(2000);
-			osDelay(1200);
-			forward(3000);
-			osDelay(1000);
-			forward(-4000);	
-			osDelay(3500);			
-		}
-		else if(xiatai_state==3)
-		{
-			zuozhuan(2000);
-			osDelay(1200);
-			forward(3000);
-			osDelay(1500);
-			forward(-4000);	
-			osDelay(3500);
-		}
-		else if(xiatai_state==4)
-		{
-			youzhuan(2000);
-			osDelay(1200);
-			forward(3000);
-			osDelay(1500);
-			forward(-4000);	
-			osDelay(3500);
-		}
+		mission_on=7;
+//		if(xiatai_state==1)
+//		{
+//			forward(3000);
+//			osDelay(1000);
+//			forward(-4000);
+//			osDelay(3500);
+//		}
+//		else if(xiatai_state==2)
+//		{
+//			spin(2000);
+//			osDelay(1200);
+//			forward(3000);
+//			osDelay(1000);
+//			forward(-4000);	
+//			osDelay(3500);			
+//		}
+//		else if(xiatai_state==3)
+//		{
+//			zuozhuan(2000);
+//			osDelay(1200);
+//			forward(3000);
+//			osDelay(1500);
+//			forward(-4000);	
+//			osDelay(3500);
+//		}
+//		else if(xiatai_state==4)
+//		{
+//			youzhuan(2000);
+//			osDelay(1200);
+//			forward(3000);
+//			osDelay(1500);
+//			forward(-4000);	
+//			osDelay(3500);
+//		}
 		
+		if(GD6==0)
+		{
+			forward(0);
+			osDelay(100);
+			forward(3000);
+			osDelay(1000);
+			forward(-5000);
+			osDelay(2500);			
+		}
+		else 
+			spin(2000);
 //		ticktime=0;
 //		forward(-2000);
 //		while(ticktime>shangtaitime1)
@@ -1477,6 +1619,7 @@ void XiataiTask(void const * argument)
 //		forward(2000);
 //		while(ticktime>shangtaitime2)//定死延时
 //		{}
+			
 	  while(HD1>xiataihuidu1&&HD2>xiataihuidu1)//灰度判断{}
 		{		
 
